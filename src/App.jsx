@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Github, Link as LinkIcon, Mail, FileText, GraduationCap } from "lucide-react";
 
 /**
@@ -14,6 +14,7 @@ const PROJECTS = [
       "A Python-driven dashboard that flags regime, 20-week highs, and ROC filters to surface momentum opportunities.",
     tags: ["Python", "Pandas", "Finance", "Backtesting"],
     pdf: `${import.meta.env.BASE_URL}projects/trend-dashboard.pdf`,
+    image: `${import.meta.env.BASE_URL}projects/trend-dashboard.jpg`,
     links: {
       github: "https://github.com/bradenfruin/trend-dashboard",
       demo: "https://sp500-stock-tracker-zreasrjhec5vajv7achxgg.streamlit.app/",
@@ -70,61 +71,85 @@ const PROJECTS = [
 ];
 
 const ProjectCard = ({ p }) => (
-  <div className="group rounded-2xl overflow-hidden border border-zinc-800 shadow-sm hover:shadow-md transition-shadow bg-zinc-900/60 backdrop-blur">
+  <a href={`#/project/${p.id}`} className="group block rounded-2xl overflow-hidden border border-zinc-800 shadow-sm hover:shadow-md transition-shadow bg-zinc-900/60 backdrop-blur">
     <div className="aspect-video w-full overflow-hidden">
-      {p.links?.demo ? (
-        <iframe
-          src={`${p.links.demo}${p.links.demo.includes('?') ? '&' : '?'}embedded=true`}
-          title={`${p.title} live demo`}
-          className="h-full w-full"
-          loading="lazy"
-          allow="clipboard-read; clipboard-write; fullscreen"
-        />
-      ) : (
+      {p.image ? (
+        <img src={p.image} alt={`${p.title} preview`} className="h-full w-full object-cover group-hover:scale-[1.02] transition-transform" />
+      ) : p.pdf ? (
         <object data={p.pdf} type="application/pdf" className="h-full w-full">
-          <div className="h-full w-full flex items-center justify-center text-zinc-400 text-xs">
-            PDF preview not available
-          </div>
+          <div className="h-full w-full flex items-center justify-center text-zinc-400 text-sm">Open Project</div>
         </object>
+      ) : (
+        <div className="h-full w-full flex items-center justify-center text-zinc-400 text-sm">Open Project</div>
       )}
     </div>
     <div className="p-5 space-y-3">
       <h3 className="text-lg font-semibold leading-tight text-white">{p.title}</h3>
       <p className="text-sm text-zinc-300">{p.description}</p>
-      <div className="flex flex-wrap gap-2">
-        {p.tags.map((t) => (
-          <span key={t} className="text-xs px-2 py-0.5 rounded-full border border-zinc-700 text-zinc-200">
-            {t}
-          </span>
-        ))}
+      <div className="flex items-center pt-1">
+        <span className="px-3 py-1 rounded-xl border border-zinc-700 text-sm">Open Project</span>
       </div>
-      <div className="flex items-center gap-3 pt-1">
-        {p.links.github && (
-          <a
-            href={p.links.github}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 text-sm underline-offset-2 hover:underline text-zinc-200"
-          >
+    </div>
+  </a>
+);
+
+function ProjectDetail({ id }) {
+  const p = PROJECTS.find((x) => x.id === id);
+  if (!p) return <p className="text-zinc-400">Project not found.</p>;
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-semibold">{p.title}</h1>
+      <p className="text-zinc-300">{p.description}</p>
+      <div className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/60">
+        <div className="aspect-video w-full">
+          {p.links?.demo ? (
+            <iframe
+              src={`${p.links.demo}${p.links.demo.includes('?') ? '&' : '?'}embedded=true`}
+              title={`${p.title} live demo`}
+              className="h-full w-full"
+              loading="lazy"
+              allow="clipboard-read; clipboard-write; fullscreen"
+            />
+          ) : p.pdf ? (
+            <object data={p.pdf} type="application/pdf" className="h-full w-full">
+              <div className="h-full w-full flex items-center justify-center text-zinc-400 text-xs">PDF preview not available</div>
+            </object>
+          ) : p.image ? (
+            <img src={p.image} alt={`${p.title} preview`} className="h-full w-full object-cover" />
+          ) : null}
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        {p.links?.github && (
+          <a href={p.links.github} target="_blank" rel="noreferrer" className="px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center gap-2">
             <Github className="h-4 w-4" /> Code
           </a>
         )}
-        {p.links.demo && (
-          <a
-            href={p.links.demo}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 text-sm underline-offset-2 hover:underline text-zinc-200"
-          >
-            <LinkIcon className="h-4 w-4" /> Demo
+        {p.links?.demo && (
+          <a href={p.links.demo} target="_blank" rel="noreferrer" className="px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center gap-2">
+            <LinkIcon className="h-4 w-4" /> Live Demo
           </a>
         )}
+        {p.pdf && (
+          <a href={p.pdf} target="_blank" rel="noreferrer" className="px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center gap-2">
+            Open PDF
+          </a>
+        )}
+        <a href="#/" className="px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center">Back</a>
       </div>
     </div>
-  </div>
-);
+  );
+}
 
 export default function PortfolioSite() {
+  const [route, setRoute] = useState(typeof window !== 'undefined' ? window.location.hash : '#');
+  useEffect(() => {
+    const onHash = () => setRoute(window.location.hash || '#');
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  const match = route.match(/^#\/project\/([^\/?#]+)/);
+
   const filtered = PROJECTS;
 
   return (
@@ -142,90 +167,98 @@ export default function PortfolioSite() {
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="mx-auto max-w-6xl px-4 pt-12 pb-10">
-        <div className="grid md:grid-cols-[120px,1fr] gap-6 items-center">
-          <div className="h-28 w-28 rounded-2xl border border-zinc-800 overflow-hidden bg-black" aria-label="Braden Fruin avatar">
-            <object data={`${import.meta.env.BASE_URL}avatar.pdf`} type="application/pdf" className="h-full w-full">
-              {/* Fallback if PDF isn't available: */}
-              <img src={`${import.meta.env.BASE_URL}avatar.jpg`} alt="Braden Fruin" className="h-full w-full object-cover" />
-            </object>
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Braden's Mechanical Engineering + CS projects</h1>
-            <p className="text-zinc-300 max-w-2xl">
-              Projects that I have built for school or personal interests/hobbies
-            </p>
-            
-          </div>
-        </div>
-      </section>
+      {match ? (
+        <>
+          {/* Project Detail View */}
+          <section className="mx-auto max-w-6xl px-4 pt-12 pb-10">
+            <a href="#/" className="inline-block mb-4 text-sm underline underline-offset-4">← Back to Projects</a>
+            <ProjectDetail id={match[1]} />
+          </section>
+        </>
+      ) : (
+        <>
+          {/* Hero */}
+          <section className="mx-auto max-w-6xl px-4 pt-12 pb-10">
+            <div className="grid md:grid-cols-[120px,1fr] gap-6 items-center">
+              <div className="h-28 w-28 rounded-2xl border border-zinc-800 overflow-hidden bg-black" aria-label="Braden Fruin avatar">
+                <object data={`${import.meta.env.BASE_URL}avatar.pdf`} type="application/pdf" className="h-full w-full">
+                  {/* Fallback if PDF isn't available: */}
+                  <img src={`${import.meta.env.BASE_URL}avatar.jpg`} alt="Braden Fruin" className="h-full w-full object-cover" />
+                </object>
+              </div>
+              <div className="space-y-2">
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Braden's Mechanical Engineering + CS projects</h1>
+                <p className="text-zinc-300 max-w-2xl">Projects that I have built for school or personal interests/hobbies</p>
+              </div>
+            </div>
+          </section>
 
+          {/* Projects */}
+          <section id="projects" className="mx-auto max-w-6xl px-4 pb-16">
+            <h2 className="text-xl font-semibold mb-4">Projects</h2>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {PROJECTS.map((p) => (
+                <ProjectCard key={p.id} p={p} />
+              ))}
+            </div>
+            {PROJECTS.length === 0 && (
+              <p className="text-center text-zinc-400 pt-10">No projects to show.</p>
+            )}
+          </section>
+
+          {/* About */}
+          <section id="about" className="mx-auto max-w-6xl px-4 pb-20">
+            <h2 className="text-xl font-semibold mb-4">About</h2>
+            <div className="rounded-2xl border border-zinc-800 p-6 md:p-8 bg-zinc-900/60">
+              <p className="text-zinc-300">
+                I’m a Mechanical Engineering student at UConn who loves building useful things. My interests include
+                aerospace, robotics, and quantitative systems. I use Python for data work, microcontrollers for hardware,
+                and CAD + rapid prototyping for mechanical design. I’m currently exploring trend-following systems and
+                robust mechanical designs for energy.
+              </p>
+            </div>
+          </section>
+
+          {/* Education */}
+          <section id="education" className="mx-auto max-w-6xl px-4 pb-20">
+            <h2 className="text-xl font-semibold mb-4">Education</h2>
+            <div className="rounded-2xl border border-zinc-800 p-6 md:p-8 bg-zinc-900/60">
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Resume */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-zinc-300"><FileText className="h-5 w-5" /><span>Resume</span></div>
+                  <a href={`${import.meta.env.BASE_URL}resume.pdf`} target="_blank" rel="noreferrer" className="px-3 py-2 rounded-xl border border-zinc-700 inline-block w-fit">Download Resume (PDF)</a>
+                  <div className="w-full h-[70vh] overflow-hidden rounded-xl border border-zinc-800 bg-black">
+                    <iframe src={`${import.meta.env.BASE_URL}resume.pdf#view=FitH`} title="Resume preview" className="w-full h-full" />
+                  </div>
+                </div>
+                {/* Transcript */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-zinc-300"><GraduationCap className="h-5 w-5" /><span>Transcript</span></div>
+                  <a href={`${import.meta.env.BASE_URL}transcript.pdf`} target="_blank" rel="noreferrer" className="px-3 py-2 rounded-xl border border-zinc-700 inline-block w-fit">Download Transcript (PDF)</a>
+                  <div className="w-full h-[70vh] overflow-hidden rounded-xl border border-zinc-800 bg-black">
+                    <iframe src={`${import.meta.env.BASE_URL}transcript.pdf#view=FitH`} title="Transcript preview" className="w-full h-full" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Contact */}
+          <section id="contact" className="mx-auto max-w-6xl px-4 pb-20">
+            <h2 className="text-xl font-semibold mb-4">Contact Me</h2>
+            <div className="rounded-2xl border border-zinc-800 p-6 md:p-8 bg-zinc-900/60 flex items-center justify-between flex-wrap gap-4">
+              <p className="text-zinc-300">I’m open to internships, collaborations, and interesting projects.</p>
+              <div className="flex items-center gap-4 text-sm">
+                <a href="mailto:brande.fruin@uconn.edu" className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-zinc-700"> <Mail className="h-4 w-4"/> Email me</a>
+                <a href="https://github.com/bradenfruin" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-zinc-700"><Github className="h-4 w-4"/> GitHub</a>
+                <a href="https://www.linkedin.com/in/braden-fruin-081695333/" target="_blank" rel="noreferrer" className="underline underline-offset-4">LinkedIn</a>
+              </div>
+            </div>
+          </section>
+        </>
+      )}
       
-      {/* Projects */}
-      <section id="projects" className="mx-auto max-w-6xl px-4 pb-16">
-        <h2 className="text-xl font-semibold mb-4">Projects</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((p) => (
-            <ProjectCard key={p.id} p={p} />
-          ))}
-        </div>
-        {filtered.length === 0 && (
-          <p className="text-center text-zinc-400 pt-10">No projects to show.</p>
-        )}
-      </section>
-
-      {/* About */}
-      <section id="about" className="mx-auto max-w-6xl px-4 pb-20">
-        <h2 className="text-xl font-semibold mb-4">About</h2>
-        <div className="rounded-2xl border border-zinc-800 p-6 md:p-8 bg-zinc-900/60">
-          <p className="text-zinc-300">
-            I’m a Mechanical Engineering student at UConn who loves building useful things. My interests include
-            aerospace, robotics, and quantitative systems. I use Python for data work, microcontrollers for hardware,
-            and CAD + rapid prototyping for mechanical design. I’m currently exploring trend-following systems and
-            robust mechanical designs for energy.
-          </p>
-        </div>
-      </section>
-
-      {/* Education */}
-      <section id="education" className="mx-auto max-w-6xl px-4 pb-20">
-        <h2 className="text-xl font-semibold mb-4">Education</h2>
-        <div className="rounded-2xl border border-zinc-800 p-6 md:p-8 bg-zinc-900/60">
-          
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Resume */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-zinc-300"><FileText className="h-5 w-5" /><span>Resume</span></div>
-              <a href={`${import.meta.env.BASE_URL}resume.pdf`} target="_blank" rel="noreferrer" className="px-3 py-2 rounded-xl border border-zinc-700 inline-block w-fit">Download Resume (PDF)</a>
-              <div className="w-full h-[70vh] overflow-hidden rounded-xl border border-zinc-800 bg-black">
-                <iframe src={`${import.meta.env.BASE_URL}resume.pdf#view=FitH`} title="Resume preview" className="w-full h-full" />
-              </div>
-            </div>
-            {/* Transcript */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-zinc-300"><GraduationCap className="h-5 w-5" /><span>Transcript</span></div>
-              <a href={`${import.meta.env.BASE_URL}transcript.pdf`} target="_blank" rel="noreferrer" className="px-3 py-2 rounded-xl border border-zinc-700 inline-block w-fit">Download Transcript (PDF)</a>
-              <div className="w-full h-[70vh] overflow-hidden rounded-xl border border-zinc-800 bg-black">
-                <iframe src={`${import.meta.env.BASE_URL}transcript.pdf#view=FitH`} title="Transcript preview" className="w-full h-full" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Contact */}
-      <section id="contact" className="mx-auto max-w-6xl px-4 pb-20">
-        <h2 className="text-xl font-semibold mb-4">Contact Me</h2>
-        <div className="rounded-2xl border border-zinc-800 p-6 md:p-8 bg-zinc-900/60 flex items-center justify-between flex-wrap gap-4">
-          <p className="text-zinc-300">I’m open to internships, collaborations, and interesting projects.</p>
-          <div className="flex items-center gap-4 text-sm">
-            <a href="mailto:brande.fruin@uconn.edu" className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-zinc-700"> <Mail className="h-4 w-4"/> Email me</a>
-            <a href="https://github.com/bradenfruin" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-zinc-700"><Github className="h-4 w-4"/> GitHub</a>
-            <a href="https://www.linkedin.com/in/braden-fruin-081695333/" target="_blank" rel="noreferrer" className="underline underline-offset-4">LinkedIn</a>
-          </div>
-        </div>
-      </section>
 
       {/* Footer */}
       <footer className="border-t border-zinc-800 py-10">
