@@ -16,7 +16,7 @@ const PROJECTS = [
     pdf: `${import.meta.env.BASE_URL}projects/trend-dashboard.pdf`,
     links: {
       github: "https://github.com/bradenfruin/trend-dashboard",
-      demo: "",
+      demo: "https://sp500-stock-tracker-zreasrjhec5vajv7achxgg.streamlit.app/",
     },
   },
   {
@@ -72,8 +72,20 @@ const PROJECTS = [
 const ProjectCard = ({ p }) => (
   <div className="group rounded-2xl overflow-hidden border border-zinc-800 shadow-sm hover:shadow-md transition-shadow bg-zinc-900/60 backdrop-blur">
     <div className="aspect-video w-full overflow-hidden">
-      <object data={p.pdf} type="application/pdf" className="h-full w-full">
-        <div className="h-full w-full flex items-center justify-center text-zinc-400 text-xs">PDF preview not available</div>
+      {p.links?.demo ? (
+        <iframe
+          src={`${p.links.demo}${p.links.demo.includes('?') ? '&' : '?'}embedded=true`}
+          title={`${p.title} live demo`}
+          className="h-full w-full"
+          loading="lazy"
+          allow="clipboard-read; clipboard-write; fullscreen"
+        />
+      ) : (
+        <object data={p.pdf} type="application/pdf" className="h-full w-full">
+          <div className="h-full w-full flex items-center justify-center text-zinc-400 text-xs">PDF preview not available</div>
+        </object>
+      )}
+    </div>
       </object>
     </div>
     <div className="p-5 space-y-3">
