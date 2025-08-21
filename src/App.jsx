@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { Github, Link as LinkIcon, Mail, Search, FileText, GraduationCap } from "lucide-react";
+import React from "react";
+import { Github, Link as LinkIcon, Mail, FileText, GraduationCap } from "lucide-react";
 
 /**
  * Personal Project Portfolio — Dark Only (No Category or Tag Filters)
@@ -113,16 +113,7 @@ const ProjectCard = ({ p }) => (
 );
 
 export default function PortfolioSite() {
-  const [query, setQuery] = useState("");
-
-  const filtered = useMemo(() => {
-    return PROJECTS.filter((p) => {
-      return [p.title, p.description, p.tags.join(" ")]
-        .join(" ")
-        .toLowerCase()
-        .includes(query.toLowerCase());
-    });
-  }, [query]);
+  const filtered = PROJECTS;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-950 to-black text-zinc-50">
@@ -158,19 +149,7 @@ export default function PortfolioSite() {
         </div>
       </section>
 
-      {/* Search Only (no tag/category filters) */}
-      <section className="mx-auto max-w-6xl px-4 pb-4">
-        <div className="relative max-w-xl">
-          <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search projects, tech, descriptions…"
-            className="w-full pl-9 pr-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-200"
-          />
-        </div>
-      </section>
-
+      
       {/* Projects */}
       <section id="projects" className="mx-auto max-w-6xl px-4 pb-16">
         <h2 className="text-xl font-semibold mb-4">Projects</h2>
@@ -180,7 +159,7 @@ export default function PortfolioSite() {
           ))}
         </div>
         {filtered.length === 0 && (
-          <p className="text-center text-zinc-400 pt-10">No projects match your search.</p>
+          <p className="text-center text-zinc-400 pt-10">No projects to show.</p>
         )}
       </section>
 
@@ -201,7 +180,7 @@ export default function PortfolioSite() {
       <section id="education" className="mx-auto max-w-6xl px-4 pb-20">
         <h2 className="text-xl font-semibold mb-4">Education</h2>
         <div className="rounded-2xl border border-zinc-800 p-6 md:p-8 bg-zinc-900/60">
-          <p className="text-zinc-300 mb-6">Résumé and official transcript are available below. Place <code>resume.pdf</code> and <code>transcript.pdf</code> in your public folder.</p>
+          
           <div className="grid md:grid-cols-2 gap-6">
             {/* Resume */}
             <div className="space-y-3">
