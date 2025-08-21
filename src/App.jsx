@@ -14,7 +14,6 @@ const PROJECTS = [
       "A Python-driven dashboard that flags regime, 20-week highs, and ROC filters to surface momentum opportunities.",
     tags: ["Python", "Pandas", "Finance", "Backtesting"],
     pdf: `${import.meta.env.BASE_URL}projects/trend-dashboard.pdf`,
-    image: `${import.meta.env.BASE_URL}projects/trend-dashboard.jpg`,
     links: {
       github: "https://github.com/bradenfruin/trend-dashboard",
       demo: "https://sp500-stock-tracker-zreasrjhec5vajv7achxgg.streamlit.app/",
