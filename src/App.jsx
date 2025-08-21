@@ -82,11 +82,11 @@ const ProjectCard = ({ p }) => (
         />
       ) : (
         <object data={p.pdf} type="application/pdf" className="h-full w-full">
-          <div className="h-full w-full flex items-center justify-center text-zinc-400 text-xs">PDF preview not available</div>
+          <div className="h-full w-full flex items-center justify-center text-zinc-400 text-xs">
+            PDF preview not available
+          </div>
         </object>
       )}
-    </div>
-      </object>
     </div>
     <div className="p-5 space-y-3">
       <h3 className="text-lg font-semibold leading-tight text-white">{p.title}</h3>
