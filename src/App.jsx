@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Github, Link as LinkIcon, Mail, FileText, GraduationCap } from "lucide-react";
+import QRCode from "qrcode";
 
 /**
  * Personal Project Portfolio — Dark Only (No Category or Tag Filters)
@@ -287,9 +288,120 @@ function UnitConverter() {
   );
 }
 
+function QrTool() {
+  const [text, setText] = useState("https://bradenfruin.github.io/");
+  const [ecc, setEcc] = useState("L"); // L, M, Q, H
+  const [margin, setMargin] = useState(3);
+  const [scale, setScale] = useState(6);
+  const [dark, setDark] = useState("#4B8BBE");
+  const [light, setLight] = useState("#FFFFFF");
+  const [dataUrl, setDataUrl] = useState("");
+
+  const generate = async () => {
+    try {
+      const url = await QRCode.toDataURL(text || " ", {
+        errorCorrectionLevel: ecc,
+        margin,
+        scale,
+        color: { dark, light },
+      });
+      setDataUrl(url);
+    } catch (e) {
+      console.error(e);
+      setDataUrl("");
+    }
+  };
+
+  useEffect(() => { generate(); }, []);
+
+  return (
+    <div className="w-full max-w-2xl mx-auto space-y-4">
+      <div className="space-y-2">
+        <label className="text-sm text-zinc-400">Text / URL</label>
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Enter text or a link"
+          className="w-full px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-100"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="space-y-1">
+          <label className="text-sm text-zinc-400">Error correction</label>
+          <select value={ecc} onChange={(e) => setEcc(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-100">
+            {(["L","M","Q","H"]).map(x => <option key={x} value={x}>{x}</option>)}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-sm text-zinc-400">Margin</label>
+          <input type="number" min={0} max={10} value={margin} onChange={(e) => setMargin(parseInt(e.target.value||"0"))} className="w-full px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-100" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-sm text-zinc-400">Scale</label>
+          <input type="number" min={2} max={16} value={scale} onChange={(e) => setScale(parseInt(e.target.value||"6"))} className="w-full px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-100" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-sm text-zinc-400">Actions</label>
+          <button onClick={generate} className="w-full px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 hover:bg-zinc-800">Generate</button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="space-y-1">
+          <label className="text-sm text-zinc-400">Dark color</label>
+          <input type="color" value={dark} onChange={(e) => setDark(e.target.value)} className="w-full h-10 rounded-md border border-zinc-700 bg-zinc-900" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-sm text-zinc-400">Light color</label>
+          <input type="color" value={light} onChange={(e) => setLight(e.target.value)} className="w-full h-10 rounded-md border border-zinc-700 bg-zinc-900" />
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 flex flex-col items-center gap-3">
+        {dataUrl ? (
+          <img src={dataUrl} alt="QR code preview" className="w-56 h-56 object-contain" />
+        ) : (
+          <div className="text-zinc-400 text-sm">Enter text and press Generate</div>
+        )}
+        {dataUrl && (
+          <a
+            href={dataUrl}
+            download="qr_code.png"
+            className="px-3 py-2 rounded-xl border border-zinc-700"
+          >
+            Download PNG
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ProjectDetail({ id }) {
   const p = PROJECTS.find((x) => x.id === id);
-  if (!p) return <p className="text-zinc-400">Project not found.</p>;
+  if (!p) return <p className=\"text-zinc-400\">Project not found.<\/p>;
+
+  // Special in-site experience for the QR Code Library
+  if (p.id === "qr-code-library") {
+    return (
+      <div className=\"space-y-6\">
+        <h1 className=\"text-2xl font-semibold\">{p.title}</h1>
+        <p className=\"text-zinc-300\">{p.description}</p>
+        <div className=\"rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/60 p-4\">
+          <QrTool />
+        </div>
+        <div className=\"flex items-center gap-3\">
+          {p.links?.github && (
+            <a href={p.links.github} target=\"_blank\" rel=\"noreferrer\" className=\"px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center gap-2\">
+              <Github className=\"h-4 w-4\" /> Code
+            </a>
+          )}
+          <a href=\"#/\" className=\"px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center\">Back</a>
+        </div>
+      </div>
+    );
+  }
 
   // Special in-site experience for the Unit Converter
   if (p.id === "unit-converter") {
@@ -513,4 +625,3 @@ export default function PortfolioSite() {
     </div>
   );
 }
-
