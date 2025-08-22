@@ -380,24 +380,24 @@ function QrTool() {
 
 function ProjectDetail({ id }) {
   const p = PROJECTS.find((x) => x.id === id);
-  if (!p) return <p className=\"text-zinc-400\">Project not found.<\/p>;
+  if (!p) return <p className="text-zinc-400">Project not found.</p>;
 
   // Special in-site experience for the QR Code Library
   if (p.id === "qr-code-library") {
     return (
-      <div className=\"space-y-6\">
-        <h1 className=\"text-2xl font-semibold\">{p.title}</h1>
-        <p className=\"text-zinc-300\">{p.description}</p>
-        <div className=\"rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/60 p-4\">
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold">{p.title}</h1>
+        <p className="text-zinc-300">{p.description}</p>
+        <div className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/60 p-4">
           <QrTool />
         </div>
-        <div className=\"flex items-center gap-3\">
+        <div className="flex items-center gap-3">
           {p.links?.github && (
-            <a href={p.links.github} target=\"_blank\" rel=\"noreferrer\" className=\"px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center gap-2\">
-              <Github className=\"h-4 w-4\" /> Code
+            <a href={p.links.github} target="_blank" rel="noreferrer" className="px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center gap-2">
+              <Github className="h-4 w-4" /> Code
             </a>
           )}
-          <a href=\"#/\" className=\"px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center\">Back</a>
+          <a href="#/" className="px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center">Back</a>
         </div>
       </div>
     );
@@ -625,4 +625,3 @@ export default function PortfolioSite() {
     </div>
   );
 }
-    
