@@ -167,9 +167,150 @@ function Calculator() {
   );
 }
 
+function UnitConverter() {
+  const [cat, setCat] = useState("length");
+  const defaults = { length: ["m", "km"], weight: ["g", "kg"], temp: ["C", "F"] };
+  const LABELS = { length: "Length", weight: "Weight", temp: "Temperature" };
+  const UNITS = {
+    length: {
+      m: { label: "Meters", toBase: (v) => v, fromBase: (v) => v },
+      km: { label: "Kilometers", toBase: (v) => v * 1000, fromBase: (v) => v / 1000 },
+      mi: { label: "Miles", toBase: (v) => v * 1609.344, fromBase: (v) => v / 1609.344 },
+      ft: { label: "Feet", toBase: (v) => v * 0.3048, fromBase: (v) => v / 0.3048 },
+    },
+    weight: {
+      g: { label: "Grams", toBase: (v) => v, fromBase: (v) => v },
+      kg: { label: "Kilograms", toBase: (v) => v * 1000, fromBase: (v) => v / 1000 },
+      lb: { label: "Pounds", toBase: (v) => v * 453.59237, fromBase: (v) => v / 453.59237 },
+    },
+    temp: {
+      C: { label: "Celsius", toBase: (v) => v, fromBase: (v) => v },
+      F: { label: "Fahrenheit", toBase: (v) => (v - 32) * 5 / 9, fromBase: (v) => v * 9 / 5 + 32 },
+      K: { label: "Kelvin", toBase: (v) => v - 273.15, fromBase: (v) => v + 273.15 },
+    },
+  };
+
+  const [fromUnit, setFromUnit] = useState(defaults[cat][0]);
+  const [toUnit, setToUnit] = useState(defaults[cat][1]);
+  const [input, setInput] = useState("");
+
+  useEffect(() => {
+    setFromUnit(defaults[cat][0]);
+    setToUnit(defaults[cat][1]);
+    setInput("");
+  }, [cat]);
+
+  const format = (x) => String(Math.round(x * 1e6) / 1e6);
+
+  const convert = (val) => {
+    const n = parseFloat(String(val).trim());
+    if (!Number.isFinite(n)) return "";
+    if (cat === "temp") {
+      const toC = UNITS.temp[fromUnit].toBase(n);
+      const out = UNITS.temp[toUnit].fromBase(toC);
+      return format(out);
+    }
+    const toBase = UNITS[cat][fromUnit].toBase(n);
+    const out = UNITS[cat][toUnit].fromBase(toBase);
+    return format(out);
+  };
+
+  const swap = () => {
+    setFromUnit((a) => {
+      setToUnit(a);
+      return toUnit;
+    });
+  };
+
+  const unitOptions = Object.entries(UNITS[cat]).map(([k, v]) => ({ value: k, label: v.label }));
+
+  return (
+    <div className="w-full max-w-2xl mx-auto space-y-4">
+      <div className="flex gap-2">
+        {(["length", "weight", "temp"]).map((c) => (
+          <button
+            key={c}
+            onClick={() => setCat(c)}
+            className={`px-3 py-1 rounded-xl border text-sm ${cat === c ? "bg-white text-black border-transparent" : "bg-zinc-900 text-zinc-200 border-zinc-700 hover:border-zinc-500"}`}
+          >
+            {LABELS[c]}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid md:grid-cols-[1fr,auto,1fr] gap-3 items-end">
+        <div className="space-y-2">
+          <label className="text-sm text-zinc-400">From</label>
+          <select
+            value={fromUnit}
+            onChange={(e) => setFromUnit(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-100"
+          >
+            {unitOptions.map((u) => (
+              <option key={u.value} value={u.value}>{u.label}</option>
+            ))}
+          </select>
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Enter value"
+            className="w-full px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-100"
+          />
+        </div>
+
+        <div className="flex flex-col items-center gap-2 pb-2">
+          <button onClick={swap} className="px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 hover:bg-zinc-800">↔</button>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm text-zinc-400">To</label>
+          <select
+            value={toUnit}
+            onChange={(e) => setToUnit(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-100"
+          >
+            {unitOptions.map((u) => (
+              <option key={u.value} value={u.value}>{u.label}</option>
+            ))}
+          </select>
+          <input
+            value={convert(input)}
+            readOnly
+            className="w-full px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-100"
+            aria-label="Conversion result"
+          />
+        </div>
+      </div>
+
+      <p className="text-xs text-zinc-500">Length uses meters as base; weight uses grams; temperature converts via Celsius.</p>
+    </div>
+  );
+}
+
 function ProjectDetail({ id }) {
   const p = PROJECTS.find((x) => x.id === id);
   if (!p) return <p className="text-zinc-400">Project not found.</p>;
+
+  // Special in-site experience for the Unit Converter
+  if (p.id === "unit-converter") {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold">{p.title}</h1>
+        <p className="text-zinc-300">{p.description}</p>
+        <div className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/60 p-4">
+          <UnitConverter />
+        </div>
+        <div className="flex items-center gap-3">
+          {p.links?.github && (
+            <a href={p.links.github} target="_blank" rel="noreferrer" className="px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center gap-2">
+              <Github className="h-4 w-4" /> Code
+            </a>
+          )}
+          <a href="#/" className="px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center">Back</a>
+        </div>
+      </div>
+    );
+  }
 
   // Special in-site experience for the GUI Calculator
   if (p.id === "gui-calculator") {
@@ -372,3 +513,4 @@ export default function PortfolioSite() {
     </div>
   );
 }
+
