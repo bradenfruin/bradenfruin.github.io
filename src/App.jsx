@@ -14,6 +14,7 @@ const PROJECTS = [
       "A Python-driven dashboard that flags regime, 20-week highs, and ROC filters to surface momentum opportunities.",
     tags: ["Python", "Pandas", "Finance", "Backtesting"],
     pdf: `${import.meta.env.BASE_URL}projects/trend-dashboard.pdf`,
+
     links: {
       github: "https://github.com/bradenfruin/trend-dashboard",
       demo: "https://sp500-stock-tracker-zreasrjhec5vajv7achxgg.streamlit.app/",
@@ -92,9 +93,105 @@ const ProjectCard = ({ p }) => (
   </a>
 );
 
+function Calculator() {
+  const [expr, setExpr] = useState("");
+
+  const sanitize = (s) => s.replace(/[^0-9+\-*/().% ]/g, "");
+  const evaluate = () => {
+    try {
+      const safe = sanitize(expr || "0");
+      // eslint-disable-next-line no-new-func
+      const result = Function(`"use strict";return (${safe})`)();
+      if (Number.isFinite(result)) setExpr(String(result));
+      else setExpr("Error");
+    } catch {
+      setExpr("Error");
+    }
+  };
+
+  const press = (t) => {
+    if (t === "=") return evaluate();
+    if (t === "C" || t === "CE") return setExpr("");
+    if (t === "DEL") return setExpr((v) => v.slice(0, -1));
+    if (t === "1/x") {
+      try {
+        const v = parseFloat(expr || "0");
+        const r = 1 / v;
+        if (Number.isFinite(r)) setExpr(String(r)); else setExpr("Error");
+      } catch { setExpr("Error"); }
+      return;
+    }
+    if (t === "square") {
+      try { const v = parseFloat(expr || "0"); setExpr(String(v ** 2)); }
+      catch { setExpr("Error"); }
+      return;
+    }
+    if (t === "sqrt") {
+      try { const v = parseFloat(expr || "0"); setExpr(String(Math.sqrt(v))); }
+      catch { setExpr("Error"); }
+      return;
+    }
+    if (t === "pi") return setExpr((v) => v + "3.1415926");
+    setExpr((v) => v + t);
+  };
+
+  const rows = [
+    ["%", "CE", "C", "DEL"],
+    ["1/x", "square", "sqrt", "+"],
+    ["7", "8", "9", "-"],
+    ["4", "5", "6", "*"],
+    ["1", "2", "3", "/"],
+    ["pi", "0", ".", "="]
+  ];
+
+  return (
+    <div className="w-full max-w-md mx-auto">
+      <input
+        value={expr}
+        readOnly
+        className="w-full mb-3 px-3 py-3 text-right text-2xl rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-100"
+        aria-label="Calculator display"
+      />
+      <div className="grid grid-cols-4 gap-2">
+        {rows.flat().map((t, i) => (
+          <button
+            key={i}
+            onClick={() => press(t)}
+            className={`px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 active:scale-[.98] transition ${t === "=" ? "col-span-1" : ""}`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ProjectDetail({ id }) {
   const p = PROJECTS.find((x) => x.id === id);
   if (!p) return <p className="text-zinc-400">Project not found.</p>;
+
+  // Special in-site experience for the GUI Calculator
+  if (p.id === "gui-calculator") {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold">{p.title}</h1>
+        <p className="text-zinc-300">{p.description}</p>
+        <div className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/60 p-4">
+          <Calculator />
+        </div>
+        <div className="flex items-center gap-3">
+          {p.links?.github && (
+            <a href={p.links.github} target="_blank" rel="noreferrer" className="px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center gap-2">
+              <Github className="h-4 w-4" /> Code
+            </a>
+          )}
+          <a href="#/" className="px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center">Back</a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">{p.title}</h1>
@@ -139,6 +236,7 @@ function ProjectDetail({ id }) {
     </div>
   );
 }
+
 
 export default function PortfolioSite() {
   const [route, setRoute] = useState(typeof window !== 'undefined' ? window.location.hash : '#');
