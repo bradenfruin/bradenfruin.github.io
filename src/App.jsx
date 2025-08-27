@@ -367,25 +367,21 @@ function Sp500Viewer({ equityUrl, tradesUrl }) {
 
   function parseCSV(text) {
     // Robust CSV split without regex or escape sequences
-    const CR = String.fromCharCode(13); // "
-"
-    const LF = String.fromCharCode(10); // "
-"
+    const CR = String.fromCharCode(13); // CR
+    const LF = String.fromCharCode(10); // LF
     const cleaned = (text || "").split(CR).join("").trim();
     const lines = cleaned ? cleaned.split(LF) : [];
     if (!lines.length) return { headers: [], rows: [] };
-    const headers = lines[0].split(',').map((h) => h.trim());
+    const headers = lines[0].split(",").map((h) => h.trim());
     const rows = lines.slice(1).map((ln) => {
-      const cols = ln.split(',');
+      const cols = ln.split(",");
       const obj = {};
-      headers.forEach((h, i) => (obj[h] = (cols[i] ?? '').trim()));
+      headers.forEach((h, i) => (obj[h] = (cols[i] ?? "").trim()));
       return obj;
-    });
-    return { headers, rows };
-  });
-    return { headers, rows };
-  });
-    return { headers, rows };
+    }
+  }
+  }
+  }
   }
 
   useEffect(() => {
