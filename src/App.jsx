@@ -69,6 +69,21 @@ const PROJECTS = [
       demo: "",
     },
   },
+  {
+    id: "sp500-backtest",
+    title: "S&P 500 Backtest (1970–present)",
+    description:
+      "Survivorship-bias-free 20W breakout + ROC + regime with dynamic trailing stops; CRSP/WRDS. Interactive equity & trades viewer.",
+    tags: ["Python", "Backtest", "CRSP", "WRDS"],
+    data: {
+      equity: `${import.meta.env.BASE_URL}data/sp500_equity_1970.csv`,
+      trades: `${import.meta.env.BASE_URL}data/sp500_trades_1970_tickers.csv`,
+    },
+    links: {
+      github: "",
+      demo: "",
+    },
+  },
 ];
 
 const ProjectCard = ({ p }) => (
@@ -342,6 +357,193 @@ function QrTool() {
   );
 }
 
+function Sp500Viewer({ equityUrl, tradesUrl }) {
+  const [eqRows, setEqRows] = useState(null);
+  const [trRows, setTrRows] = useState(null);
+  const [err, setErr] = useState("");
+  const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE = 25;
+
+  function parseCSV(text) {
+    const lines = text.trim().split(/
+?
+/);
+    if (!lines.length) return { headers: [], rows: [] };
+    const headers = lines[0].split(",").map((h) => h.trim());
+    const rows = lines.slice(1).map((ln) => {
+      const cols = ln.split(",");
+      const obj = {};
+      headers.forEach((h, i) => (obj[h] = (cols[i] ?? "").trim()));
+      return obj;
+    });
+    return { headers, rows };
+  }
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const [eqTxt, trTxt] = await Promise.all([
+          fetch(equityUrl).then((r) => (r.ok ? r.text() : Promise.reject("Equity CSV not found"))),
+          fetch(tradesUrl).then((r) => (r.ok ? r.text() : Promise.reject("Trades CSV not found"))),
+        ]);
+        if (!alive) return;
+        const eq = parseCSV(eqTxt).rows;
+        const tr = parseCSV(trTxt).rows;
+        setEqRows(eq);
+        setTrRows(tr);
+      } catch (e) {
+        if (alive) setErr(String(e));
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [equityUrl, tradesUrl]);
+
+  // helpers
+  const toNum = (v, d = 0) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : d;
+  };
+  const fmtPct = (x) => `${(x * 100).toFixed(2)}%`;
+
+  function LineChart({ series, height = 200 }) {
+    const W = 800, H = height, m = 20;
+    const yVals = series.map((d) => d.y);
+    const minY = Math.min(...yVals);
+    const maxY = Math.max(...yVals);
+    const span = maxY - minY || 1e-9;
+    const n = series.length;
+    const x = (i) => m + (i * (W - 2 * m)) / Math.max(1, n - 1);
+    const y = (v) => m + (H - 2 * m) * (1 - (v - minY) / span);
+    const d = series.map((pt, i) => `${i ? "L" : "M"}${x(i)},${y(pt.y)}`).join(" ");
+    return (
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-48">
+        <path d={d} fill="none" stroke="currentColor" strokeWidth="1.5" />
+      </svg>
+    );
+  }
+
+  if (err) {
+    return (
+      <div className="space-y-4">
+        <p className="text-rose-400 text-sm">{String(err)}</p>
+        <p className="text-zinc-400 text-sm">Upload your CSVs to <code>public/data/sp500_equity_1970.csv</code> and <code>public/data/sp500_trades_1970_tickers.csv</code>.</p>
+      </div>
+    );
+  }
+  if (!eqRows || !trRows) {
+    return <p className="text-zinc-400 text-sm">Loading data…</p>;
+  }
+
+  // map eq rows
+  const eqSeries = eqRows.map((r) => ({
+    date: r.date,
+    equity: toNum(r.equity, 1),
+    drawdown: toNum(r.drawdown, 0),
+    bench: toNum(r.bench_equity, 1),
+  }));
+
+  // metrics
+  const eqVals = eqSeries.map((d) => d.equity);
+  const dates = eqSeries.map((d) => new Date(d.date));
+  const rets = eqVals.slice(1).map((v, i) => (v / eqVals[i] - 1));
+  const mean = rets.reduce((a, b) => a + b, 0) / Math.max(1, rets.length);
+  const std = Math.sqrt(rets.reduce((a, b) => a + (b - mean) * (b - mean), 0) / Math.max(1, rets.length));
+  const W = 52;
+  const annRet = mean * W;
+  const annVol = std * Math.sqrt(W);
+  const sharpe = annVol ? annRet / annVol : 0;
+  const years = (dates[dates.length - 1] - dates[0]) / (365.25 * 24 * 3600 * 1000);
+  const cagr = Math.pow(eqVals[eqVals.length - 1] / eqVals[0], 1 / Math.max(1e-9, years)) - 1;
+  const maxDD = Math.min(...eqSeries.map((d) => d.drawdown));
+
+  // trades filter + paging
+  const filtered = trRows.filter((r) => (r.ticker || "").toLowerCase().includes(q.toLowerCase()));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE));
+  const start = (page - 1) * PAGE;
+  const rows = filtered.slice(start, start + PAGE);
+
+  return (
+    <div className="space-y-8">
+      {/* Metrics */}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900/60"><div className="text-xs text-zinc-400">CAGR</div><div className="text-lg">{fmtPct(cagr)}</div></div>
+        <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900/60"><div className="text-xs text-zinc-400">Sharpe (weekly)</div><div className="text-lg">{sharpe.toFixed(2)}</div></div>
+        <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900/60"><div className="text-xs text-zinc-400">Max Drawdown</div><div className="text-lg">{fmtPct(maxDD)}</div></div>
+        <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900/60"><div className="text-xs text-zinc-400">Samples</div><div className="text-lg">{eqSeries.length}</div></div>
+      </div>
+
+      {/* Equity Curve */}
+      <div className="rounded-2xl border border-zinc-800 p-4 bg-zinc-900/60">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold">Equity Curve</h3>
+          <a href={equityUrl} target="_blank" rel="noreferrer" className="text-sm underline underline-offset-4">Download equity CSV</a>
+        </div>
+        <LineChart series={eqSeries.map((d, i) => ({ x: i, y: d.equity }))} />
+      </div>
+
+      {/* Drawdown */}
+      <div className="rounded-2xl border border-zinc-800 p-4 bg-zinc-900/60">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold">Drawdown</h3>
+        </div>
+        <LineChart series={eqSeries.map((d, i) => ({ x: i, y: d.drawdown }))} />
+      </div>
+
+      {/* Trades Table */}
+      <div className="rounded-2xl border border-zinc-800 p-4 bg-zinc-900/60">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold">Trades</h3>
+          <div className="flex items-center gap-3">
+            <input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Filter by ticker…" className="px-3 py-1.5 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-100 text-sm" />
+            <a href={tradesUrl} target="_blank" rel="noreferrer" className="text-sm underline underline-offset-4">Download trades CSV</a>
+          </div>
+        </div>
+        <div className="overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="text-zinc-400">
+              <tr>
+                <th className="text-left py-2 pr-3">Ticker</th>
+                <th className="text-left py-2 pr-3">Entry</th>
+                <th className="text-left py-2 pr-3">Exit</th>
+                <th className="text-right py-2 pr-3">Entry Px</th>
+                <th className="text-right py-2 pr-3">Exit Px</th>
+                <th className="text-right py-2 pr-3">Gross</th>
+                <th className="text-right py-2 pr-3">Net</th>
+                <th className="text-left py-2 pr-3">Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={i} className="border-t border-zinc-800">
+                  <td className="py-2 pr-3">{r.ticker}</td>
+                  <td className="py-2 pr-3">{r.entry_date}</td>
+                  <td className="py-2 pr-3">{r.exit_date || "OPEN"}</td>
+                  <td className="py-2 pr-3 text-right">{toNum(r.entry_px).toFixed(2)}</td>
+                  <td className="py-2 pr-3 text-right">{r.exit_px ? toNum(r.exit_px).toFixed(2) : ""}</td>
+                  <td className="py-2 pr-3 text-right">{r.gross_return ? fmtPct(toNum(r.gross_return)) : ""}</td>
+                  <td className="py-2 pr-3 text-right">{r.net_return ? fmtPct(toNum(r.net_return)) : ""}</td>
+                  <td className="py-2 pr-3">{r.exit_reason}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex items-center justify-between mt-3 text-sm">
+          <span className="text-zinc-400">Page {page} / {totalPages} — {filtered.length} trades</span>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setPage((p) => Math.max(1, p - 1))} className="px-3 py-1.5 rounded-xl border border-zinc-700 disabled:opacity-50" disabled={page <= 1}>Prev</button>
+            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} className="px-3 py-1.5 rounded-xl border border-zinc-700 disabled:opacity-50" disabled={page >= totalPages}>Next</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProjectDetail({ id }) {
   const p = PROJECTS.find((x) => x.id === id);
   if (!p) return <p className="text-zinc-400">Project not found.</p>;
@@ -354,6 +556,27 @@ function ProjectDetail({ id }) {
         <p className="text-zinc-300">{p.description}</p>
         <div className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/60 p-4">
           <QrTool />
+        </div>
+        <div className="flex items-center gap-3">
+          {p.links?.github && (
+            <a href={p.links.github} target="_blank" rel="noreferrer" className="px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center gap-2">
+              <Github className="h-4 w-4" /> Code
+            </a>
+          )}
+          <a href="#/" className="px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center">Back</a>
+        </div>
+      </div>
+    );
+  }
+
+  // Special in-site experience for the S&P 500 Backtest
+  if (p.id === "sp500-backtest") {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold">{p.title}</h1>
+        <p className="text-zinc-300">{p.description}</p>
+        <div className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/60 p-4">
+          <Sp500Viewer equityUrl={p.data?.equity || `${import.meta.env.BASE_URL}data/sp500_equity_1970.csv`} tradesUrl={p.data?.trades || `${import.meta.env.BASE_URL}data/sp500_trades_1970_tickers.csv`} />
         </div>
         <div className="flex items-center gap-3">
           {p.links?.github && (
