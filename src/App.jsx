@@ -84,7 +84,8 @@ const PROJECTS = [
       github: "",
       demo: "",
     },
-  },
+  }
+];
 
 const ProjectCard = ({ p }) => (
   <a href={`#/project/${p.id}`} className="group block rounded-2xl overflow-hidden border border-zinc-800 shadow-sm hover:shadow-md transition-shadow bg-zinc-900/60 backdrop-blur">
