@@ -9,19 +9,6 @@ import QRCode from "qrcode";
 
 const PROJECTS = [
   {
-    id: "trend-dashboard",
-    title: "Trend Dashboard (Quant)",
-    description:
-      "A Python-driven dashboard that flags regime, 20-week highs, and ROC filters to surface momentum opportunities.",
-    tags: ["Python", "Pandas", "Finance", "Backtesting"],
-    pdf: `${import.meta.env.BASE_URL}projects/trend-dashboard.pdf`,
-
-    links: {
-      github: "https://github.com/bradenfruin/trend-dashboard",
-      demo: "https://sp500-stock-tracker-zreasrjhec5vajv7achxgg.streamlit.app/",
-    },
-  },
-  {
     id: "leetcode-problems",
     title: "Leetcode problems",
     description:
