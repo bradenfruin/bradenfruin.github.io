@@ -70,11 +70,8 @@ const PROJECTS = [
     },
   },
   {
-    id: "sp500-backtest",
-    title: "S&P 500 Backtest (1970–present)",
-    description:
-      "Survivorship-bias-free 20W breakout + ROC + regime with dynamic trailing stops; CRSP/WRDS. Interactive equity & trades viewer.",
-    tags: ["Python", "Backtest", "CRSP", "WRDS"],
+    $1
+    pdf: `${import.meta.env.BASE_URL}projects/sp500-backtest.pdf`,
     data: {
       equity: `${import.meta.env.BASE_URL}data/sp500_equity_1970.csv`,
       trades: `${import.meta.env.BASE_URL}data/sp500_trades_1970_tickers.csv`,
