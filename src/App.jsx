@@ -70,7 +70,6 @@ const PROJECTS = [
     },
   },
   {
-      {
     id: "sp500-backtest",
     title: "S&P 500 Backtest (1970–present)",
     description:
