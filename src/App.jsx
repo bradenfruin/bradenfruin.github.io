@@ -112,7 +112,7 @@ const ProjectCard = ({ p }) => (
 function Calculator() {
   const [expr, setExpr] = useState("");
 
-  const sanitize = (s) => s.replace(/[^0-9+\-*/().% ]/g, "");
+  const sanitize = (s) => s.replace(/[^0-9+\-*\/().% ]/g, "");
   const evaluate = () => {
     try {
       const safe = sanitize(expr || "0");
@@ -366,17 +366,21 @@ function Sp500Viewer({ equityUrl, tradesUrl }) {
   const PAGE = 25;
 
   function parseCSV(text) {
-    const lines = text.trim().split(/
-?
-/);
+    // Safer split that avoids regex literal issues in builds
+    const cleaned = text.replace(/
+/g, '').trim();
+    const lines = cleaned ? cleaned.split('
+') : [];
     if (!lines.length) return { headers: [], rows: [] };
-    const headers = lines[0].split(",").map((h) => h.trim());
+    const headers = lines[0].split(',').map((h) => h.trim());
     const rows = lines.slice(1).map((ln) => {
-      const cols = ln.split(",");
+      const cols = ln.split(',');
       const obj = {};
-      headers.forEach((h, i) => (obj[h] = (cols[i] ?? "").trim()));
+      headers.forEach((h, i) => (obj[h] = (cols[i] ?? '').trim()));
       return obj;
     });
+    return { headers, rows };
+  });
     return { headers, rows };
   }
 
