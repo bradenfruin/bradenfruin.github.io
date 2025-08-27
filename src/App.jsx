@@ -378,10 +378,8 @@ function Sp500Viewer({ equityUrl, tradesUrl }) {
       const obj = {};
       headers.forEach((h, i) => (obj[h] = (cols[i] ?? "").trim()));
       return obj;
-    }
-  }
-  }
-  }
+    });
+    return { headers, rows };
   }
 
   useEffect(() => {
