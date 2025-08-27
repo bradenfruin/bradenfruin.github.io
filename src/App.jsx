@@ -366,11 +366,13 @@ function Sp500Viewer({ equityUrl, tradesUrl }) {
   const PAGE = 25;
 
   function parseCSV(text) {
-    // Safer split that avoids regex literal issues in builds
-    const cleaned = text.split('
-').join('').trim();
-    const lines = cleaned ? cleaned.split('
-') : [];
+    // Robust CSV split without regex or escape sequences
+    const CR = String.fromCharCode(13); // "
+"
+    const LF = String.fromCharCode(10); // "
+"
+    const cleaned = (text || "").split(CR).join("").trim();
+    const lines = cleaned ? cleaned.split(LF) : [];
     if (!lines.length) return { headers: [], rows: [] };
     const headers = lines[0].split(',').map((h) => h.trim());
     const rows = lines.slice(1).map((ln) => {
@@ -379,6 +381,8 @@ function Sp500Viewer({ equityUrl, tradesUrl }) {
       headers.forEach((h, i) => (obj[h] = (cols[i] ?? '').trim()));
       return obj;
     });
+    return { headers, rows };
+  });
     return { headers, rows };
   });
     return { headers, rows };
