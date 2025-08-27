@@ -70,7 +70,12 @@ const PROJECTS = [
     },
   },
   {
-    $1
+      {
+    id: "sp500-backtest",
+    title: "S&P 500 Backtest (1970–present)",
+    description:
+      "Survivorship-bias-free 20W breakout + ROC + regime with dynamic trailing stops; CRSP/WRDS. Interactive equity & trades viewer.",
+    tags: ["Python", "Backtest", "CRSP", "WRDS"],
     pdf: `${import.meta.env.BASE_URL}projects/sp500-backtest.pdf`,
     data: {
       equity: `${import.meta.env.BASE_URL}data/sp500_equity_1970.csv`,
@@ -81,7 +86,6 @@ const PROJECTS = [
       demo: "",
     },
   },
-];
 
 const ProjectCard = ({ p }) => (
   <a href={`#/project/${p.id}`} className="group block rounded-2xl overflow-hidden border border-zinc-800 shadow-sm hover:shadow-md transition-shadow bg-zinc-900/60 backdrop-blur">
