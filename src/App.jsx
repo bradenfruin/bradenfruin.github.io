@@ -71,7 +71,14 @@ const PROJECTS = [
       github: "",
       demo: "",
     },
-  }
+  },
+  {
+  id: "ipd-simulator",
+  title: "Iterated Prisoner’s Dilemma",
+  description: "Practice, then play five 10-round matches against distinct opponents. Serve the least total time.",
+  tags: ["Game Theory", "Decision Making", "Economics"],
+},
+
 ];
 
 const ProjectCard = ({ p }) => (
@@ -533,6 +540,351 @@ function Sp500Viewer({ equityUrl, tradesUrl }) {
     </div>
   );
 }
+// ==== IPD GAME (simple-state screen) ====
+const C = "C"; // Cooperate
+const S = "S"; // Snitch
+
+function ipdPayoff(my, opp) {
+  if (my === C && opp === C) return [1, 1];
+  if (my === S && opp === C) return [0, 3];
+  if (my === C && opp === S) return [3, 0];
+  return [2, 2]; // S/S
+}
+const ipdPct = (n, d) => (!d ? "—" : `${((100 * n) / d).toFixed(0)}%`);
+
+const IPD_QUOTES = {
+  axelrod: "Play hard. Play clean. Be careful who you trust.",
+  pavlov: "If it ain’t broke, don’t fix it.",
+  arnold: "You want a friend in this city? Get a dog!",
+  press: "Numbers are all I need.",
+  yoda: "Predict you, I will.",
+};
+
+function ipdDecideAxelrodTFT(hist) {
+  if (hist.length === 0) return C;
+  return hist[hist.length - 1].you; // mirror
+}
+function ipdDecidePavlovWSLS(hist) {
+  if (hist.length === 0) return C;
+  const last = hist[hist.length - 1];
+  const lastOpp = last.opp;
+  const good = last.oppYears <= 1; // 0 or 1 years
+  return good ? lastOpp : (lastOpp === C ? S : C);
+}
+const ipdDecideAlwaysS = () => S;
+function ipdDecidePressExtortion(hist) {
+  if (hist.length === 0) return C;
+  const last = hist[hist.length - 1];
+  const you = last.you, opp = last.opp;
+  let pC = 0.05;
+  if (you === C && opp === C) pC = 0.90;
+  else if (you === C && opp === S) pC = 0.00;
+  else if (you === S && opp === C) pC = 0.10;
+  else if (you === S && opp === S) pC = 0.05;
+  return Math.random() < pC ? C : S;
+}
+function ipdDecideYoda(hist) {
+  if (hist.length === 0) return C;
+  const k = Math.min(3, hist.length);
+  let coop = 0;
+  for (let i = hist.length - k; i < hist.length; i++) if (hist[i].you === C) coop++;
+  return coop / k >= 0.6 ? C : S;
+}
+const IPD_OPPONENTS = [
+  { id: "axelrod", name: "Axelrod", quote: IPD_QUOTES.axelrod, decide: ipdDecideAxelrodTFT },
+  { id: "pavlov",  name: "Pavlov",  quote: IPD_QUOTES.pavlov,  decide: ipdDecidePavlovWSLS },
+  { id: "arnold",  name: "Benedict Arnold", quote: IPD_QUOTES.arnold, decide: ipdDecideAlwaysS },
+  { id: "press",   name: "William Press",   quote: IPD_QUOTES.press,  decide: ipdDecidePressExtortion },
+  { id: "yoda",    name: "Yoda",            quote: IPD_QUOTES.yoda,   decide: ipdDecideYoda },
+];
+
+function IpdScreen({ onBack }) {
+  const [screen, setScreen] = React.useState("title");
+  const [practiceHist, setPracticeHist] = React.useState([]);
+  const [completed, setCompleted] = React.useState({});           // id -> true
+  const [totals, setTotals] = React.useState({});                 // id -> { youYears, oppYears }
+  const [current, setCurrent] = React.useState(null);             // opponent
+  const [matchHist, setMatchHist] = React.useState([]);           // current match
+
+  const allDone = IPD_OPPONENTS.every(c => completed[c.id]);
+
+  // Coach for practice: TFT
+  const coachMove = () => (practiceHist.length === 0 ? C : practiceHist[practiceHist.length - 1].you);
+
+  // === SCREENS ===
+  if (screen === "title") {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold">Iterated Prisoner’s Dilemma</h1>
+        <p className="text-zinc-300">
+          Choose <span className="font-medium">Cooperate</span> or <span className="font-medium">Snitch</span> each round and aim to
+          serve the <span className="font-medium">least total time</span>.
+        </p>
+        <div className="flex gap-2">
+          <button onClick={() => setScreen("howto")} className="px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 hover:bg-zinc-800">Play</button>
+          <button onClick={onBack} className="px-3 py-2 rounded-xl border border-zinc-700">Back</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (screen === "howto") {
+    return (
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold">How to Play</h2>
+        <p className="text-zinc-300">
+          Each round, both players pick <span className="font-medium">Cooperate</span> or <span className="font-medium">Snitch</span>.
+          Your choices together decide how many <span className="font-medium">years in prison</span> you both serve. You’ll face the same opponent for many rounds, so they can react to your history.
+          <span className="block mt-1 font-medium">Goal: serve the least total time.</span>
+        </p>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2 text-sm">
+          <div className="rounded-xl border border-zinc-800 p-3">Cooperate / Cooperate → <span className="font-semibold">1 & 1</span></div>
+          <div className="rounded-xl border border-zinc-800 p-3">Snitch / Cooperate → <span className="font-semibold">0 & 3</span></div>
+          <div className="rounded-xl border border-zinc-800 p-3">Snitch / Snitch → <span className="font-semibold">2 & 2</span></div>
+          <div className="rounded-xl border border-zinc-800 p-3">Cooperate / Snitch → <span className="font-semibold">3 & 0</span></div>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => { setPracticeHist([]); setScreen("practice"); }} className="px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 hover:bg-zinc-800">Practice</button>
+          <button onClick={() => setScreen("title")} className="px-3 py-2 rounded-xl border border-zinc-700">Back</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (screen === "practice") {
+    const rounds = 5;
+    const finished = practiceHist.length >= rounds;
+
+    const choose = (move) => {
+      if (finished) return;
+      const opp = coachMove();
+      const [youYears, oppYears] = ipdPayoff(move, opp);
+      setPracticeHist([...practiceHist, { round: practiceHist.length + 1, you: move, opp, youYears, oppYears }]);
+    };
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Practice Round</h2>
+          <div className="text-sm text-zinc-400">Rounds: {Math.min(practiceHist.length + 1, rounds)} / {rounds}</div>
+        </div>
+        {!finished ? (
+          <>
+            <div className="flex gap-2">
+              <button onClick={() => choose(C)} className="px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 hover:bg-zinc-800">Cooperate</button>
+              <button onClick={() => choose(S)} className="px-3 py-2 rounded-xl border border-zinc-700">Snitch</button>
+            </div>
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3">
+              <h3 className="font-semibold mb-1">Recent rounds</h3>
+              {practiceHist.length === 0 ? (
+                <div className="text-sm text-zinc-400">No rounds yet.</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="text-zinc-400"><tr><th className="text-left py-1 pr-3">#</th><th className="text-left py-1 pr-3">You</th><th className="text-left py-1 pr-3">Coach</th><th className="text-right py-1 pr-3">You (yrs)</th><th className="text-right py-1 pr-3">Coach (yrs)</th></tr></thead>
+                  <tbody>
+                    {practiceHist.slice(-10).map(r => (
+                      <tr key={r.round} className="border-t border-zinc-800">
+                        <td className="py-1 pr-3">{r.round}</td>
+                        <td className="py-1 pr-3">{r.you === C ? "Cooperate" : "Snitch"}</td>
+                        <td className="py-1 pr-3">{r.opp === C ? "Cooperate" : "Snitch"}</td>
+                        <td className="py-1 pr-3 text-right">{r.youYears}</td>
+                        <td className="py-1 pr-3 text-right">{r.oppYears}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="text-xs text-zinc-500">Tip: {["Mutual cooperation keeps both sentences low.","Snitching pays once—but invites payback.","Patterns matter when you play the same opponent."][practiceHist.length % 3]}</div>
+          </>
+        ) : (
+          <>
+            <div className="rounded-xl border border-zinc-800 p-3 bg-zinc-900/60">
+              <div className="font-semibold mb-1">Nice! Practice complete.</div>
+              <div className="text-sm text-zinc-400">Ready for real matches?</div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setPracticeHist([])} className="px-3 py-2 rounded-xl border border-zinc-700">Retry</button>
+              <button onClick={() => setScreen("hub")} className="px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 hover:bg-zinc-800">Start Game</button>
+            </div>
+          </>
+        )}
+        <button onClick={() => setScreen("howto")} className="px-3 py-2 rounded-xl border border-zinc-700">Back</button>
+      </div>
+    );
+  }
+
+  if (screen === "hub") {
+    const doneCount = Object.keys(completed).length;
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Choose an Opponent</h2>
+          <div className="text-sm text-zinc-400">Completed: {doneCount}/5</div>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {IPD_OPPONENTS.map(c => (
+            <div key={c.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold">{c.name}</div>
+                  <div className="text-xs text-zinc-400 italic">“{c.quote}”</div>
+                </div>
+                {completed[c.id] && <span className="text-xs px-2 py-1 rounded-lg border border-zinc-700">Done</span>}
+              </div>
+              <div className="text-sm text-zinc-400">
+                {totals[c.id] ? (
+                  <div>Time served (you): <span className="text-zinc-200 font-medium">{totals[c.id].youYears} yrs</span></div>
+                ) : (
+                  <div>10 rounds • Cooperate / Snitch</div>
+                )}
+              </div>
+              <button onClick={() => { setCurrent(c); setMatchHist([]); setScreen("match"); }} className="px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 hover:bg-zinc-800">
+                {completed[c.id] ? "Rematch" : "Play"}
+              </button>
+            </div>
+          ))}
+        </div>
+        {allDone && (
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3 flex items-center justify-between">
+            <div className="font-semibold">All matches complete</div>
+            <button onClick={() => setScreen("leaderboard")} className="px-3 py-1.5 rounded-xl border border-zinc-700">View Leaderboard</button>
+          </div>
+        )}
+        <button onClick={onBack} className="px-3 py-2 rounded-xl border border-zinc-700">Back</button>
+      </div>
+    );
+  }
+
+  if (screen === "match" && current) {
+    const rounds = 10;
+    const played = matchHist.length;
+    const oppCoops = matchHist.filter(h => h.opp === C).length;
+    const oppCoopPct = ipdPct(oppCoops, played);
+
+    const choose = (move) => {
+      if (played >= rounds) return;
+      const opp = current.decide(matchHist);
+      const [youYears, oppYears] = ipdPayoff(move, opp);
+      setMatchHist([...matchHist, { round: played + 1, you: move, opp, youYears, oppYears }]);
+    };
+
+    const done = played >= rounds;
+    const sumYou = matchHist.reduce((a, r) => a + r.youYears, 0);
+    const sumOpp = matchHist.reduce((a, r) => a + r.oppYears, 0);
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">{current.name}</h2>
+            <div className="text-xs text-zinc-400 italic">“{current.quote}”</div>
+          </div>
+          <div className="text-sm text-zinc-400">Round {Math.min(played + 1, rounds)} / {rounds}</div>
+        </div>
+
+        <div className="text-xs text-zinc-400">Opponent cooperation (this match): <span className="text-zinc-200">{oppCoopPct}</span></div>
+
+        {!done ? (
+          <>
+            <div className="flex gap-2">
+              <button onClick={() => choose(C)} className="px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 hover:bg-zinc-800">Cooperate</button>
+              <button onClick={() => choose(S)} className="px-3 py-2 rounded-xl border border-zinc-700">Snitch</button>
+            </div>
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3">
+              <h3 className="font-semibold mb-1">Recent rounds</h3>
+              {matchHist.length === 0 ? (
+                <div className="text-sm text-zinc-400">No rounds yet.</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="text-zinc-400"><tr><th className="text-left py-1 pr-3">#</th><th className="text-left py-1 pr-3">You</th><th className="text-left py-1 pr-3">{current.name}</th><th className="text-right py-1 pr-3">You (yrs)</th><th className="text-right py-1 pr-3">{current.name} (yrs)</th></tr></thead>
+                  <tbody>
+                    {matchHist.slice(-10).map(r => (
+                      <tr key={r.round} className="border-t border-zinc-800">
+                        <td className="py-1 pr-3">{r.round}</td>
+                        <td className="py-1 pr-3">{r.you === C ? "Cooperate" : "Snitch"}</td>
+                        <td className="py-1 pr-3">{r.opp === C ? "Cooperate" : "Snitch"}</td>
+                        <td className="py-1 pr-3 text-right">{r.youYears}</td>
+                        <td className="py-1 pr-3 text-right">{r.oppYears}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="rounded-xl border border-zinc-800 p-3 bg-zinc-900/60">
+              <div className="font-semibold mb-1">Match complete</div>
+              <div className="text-sm text-zinc-400">You served <span className="text-zinc-200 font-medium">{sumYou} years</span>. {current.name} served <span className="text-zinc-200 font-medium">{sumOpp} years</span>.</div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setMatchHist([])} className="px-3 py-2 rounded-xl border border-zinc-700">Rematch</button>
+              <button
+                onClick={() => {
+                  setTotals({ ...totals, [current.id]: { youYears: sumYou, oppYears: sumOpp } });
+                  setCompleted({ ...completed, [current.id]: true });
+                  setCurrent(null);
+                  setScreen("hub");
+                }}
+                className="px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
+              >
+                Back to opponents
+              </button>
+            </div>
+          </>
+        )}
+
+        <button onClick={() => { setCurrent(null); setScreen("hub"); }} className="px-3 py-2 rounded-xl border border-zinc-700">Back</button>
+      </div>
+    );
+  }
+
+  if (screen === "leaderboard" && allDone) {
+    const youTotal = IPD_OPPONENTS.reduce((a, c) => a + (totals[c.id]?.youYears || 0), 0);
+    const entries = [
+      ...IPD_OPPONENTS.map(c => ({ name: c.name, years: totals[c.id]?.oppYears || 0, type: "opp" })),
+      { name: "You", years: youTotal, type: "you" },
+    ].sort((a, b) => a.years - b.years);
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Leaderboard — Time Served</h2>
+          <button onClick={() => setScreen("hub")} className="px-3 py-1.5 rounded-xl border border-zinc-700">Back</button>
+        </div>
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3">
+          <table className="w-full text-sm">
+            <thead className="text-zinc-400"><tr><th className="text-left py-1 pr-3">Rank</th><th className="text-left py-1 pr-3">Name</th><th className="text-right py-1 pr-3">Total years</th></tr></thead>
+            <tbody>
+              {entries.map((e, i) => (
+                <tr key={e.name} className={`border-t border-zinc-800 ${e.type === "you" ? "bg-zinc-800/40" : ""}`}>
+                  <td className="py-1 pr-3">{i + 1}</td>
+                  <td className="py-1 pr-3">{e.name} {e.type === "you" && <span className="text-xs text-zinc-400">(you)</span>}</td>
+                  <td className="py-1 pr-3 text-right">{e.years}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => { setCompleted({}); setTotals({}); setScreen("hub"); }} className="px-3 py-2 rounded-xl border border-zinc-700">Reset run</button>
+          <button onClick={onBack} className="px-3 py-2 rounded-xl border border-zinc-700">Back to projects</button>
+        </div>
+      </div>
+    );
+  }
+
+  // fallback
+  return (
+    <div className="space-y-2">
+      <div className="text-sm text-zinc-400">Pick an opponent to start a match.</div>
+      <button onClick={() => setScreen("hub")} className="px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 hover:bg-zinc-800">Open Game Hub</button>
+    </div>
+  );
+}
+
 
 function ProjectDetail({ id }) {
   const p = PROJECTS.find((x) => x.id === id);
@@ -621,7 +973,14 @@ function ProjectDetail({ id }) {
       </div>
     );
   }
-
+  // Special: in-site game (simple state)
+if (p.id === "ipd-simulator") {
+  return (
+    <div className="space-y-6">
+      <IpdScreen onBack={() => (window.location.hash = "#/")} />
+    </div>
+  );
+}
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">{p.title}</h1>
