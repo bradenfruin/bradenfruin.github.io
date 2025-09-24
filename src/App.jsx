@@ -77,6 +77,7 @@ const PROJECTS = [
   title: "Iterated Prisoner’s Dilemma",
   description: "Practice, then play five 10-round matches against distinct opponents. Serve the least total time.",
   tags: ["Game Theory", "Decision Making", "Economics"],
+  pdf: `${import.meta.env.BASE_URL}projects/ipd.pdf`,
 },
 
 ];
