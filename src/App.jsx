@@ -377,49 +377,92 @@ function Sp500Viewer({ equityUrl, tradesUrl }) {
     });
     return { headers, rows };
   }
+function Sp500Viewer({ equityUrl, tradesUrl, altEquityUrls = [] }) {
+  const [eqRows, setEqRows] = useState(null);
+  const [trRows, setTrRows] = useState(null);
+  const [err, setErr] = useState("");
+  const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
+  const [selectedIdx, setSelectedIdx] = useState(0); // ablation variant
+  const PAGE = 25;
+
+  // --- CSV parser that handles quotes/commas ---
+  function parseCSV(text) {
+    const s = (text || "").replace(/\r/g, "");
+    if (!s) return { headers: [], rows: [] };
+    const out = [];
+    let row = [], field = "", inQ = false;
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i], nx = s[i + 1];
+      if (inQ) {
+        if (ch === '"' && nx === '"') { field += '"'; i++; }
+        else if (ch === '"') inQ = false;
+        else field += ch;
+      } else {
+        if (ch === '"') inQ = true;
+        else if (ch === ",") { row.push(field.trim()); field = ""; }
+        else if (ch === "\n") { row.push(field.trim()); out.push(row); row = []; field = ""; }
+        else field += ch;
+      }
+    }
+    if (field.length || row.length) { row.push(field.trim()); out.push(row); }
+    const headers = (out[0] || []).map(h => h.trim());
+    const rows = out.slice(1).filter(r => r.length && r.some(x => x !== "")).map(r => {
+      const o = {}; headers.forEach((h, i) => o[h] = (r[i] ?? "").trim()); return o;
+    });
+    return { headers, rows };
+  }
+
+  // --- Allow multiple equity variants for ablation ---
+  const allEquityUrls = [equityUrl, ...altEquityUrls].filter(Boolean);
+  const activeEquityUrl = allEquityUrls[Math.max(0, Math.min(selectedIdx, allEquityUrls.length - 1))];
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
         const [eqTxt, trTxt] = await Promise.all([
-          fetch(equityUrl).then((r) => (r.ok ? r.text() : Promise.reject("Equity CSV not found"))),
-          fetch(tradesUrl).then((r) => (r.ok ? r.text() : Promise.reject("Trades CSV not found"))),
+          fetch(activeEquityUrl).then(r => (r.ok ? r.text() : Promise.reject(`Equity CSV not found: ${activeEquityUrl}`))),
+          fetch(tradesUrl).then(r => (r.ok ? r.text() : Promise.reject("Trades CSV not found"))),
         ]);
         if (!alive) return;
         const eq = parseCSV(eqTxt).rows;
         const tr = parseCSV(trTxt).rows;
+
+        // schema guardrails
+        const needEq = ["date","equity","drawdown","bench_equity"];
+        needEq.forEach(k => { if (!eq.length || !(k in eq[0])) throw new Error(`Equity CSV missing column: ${k}`); });
+        const needTr = ["ticker","entry_date","exit_date","entry_px","exit_px","gross_return","net_return","exit_reason"];
+        needTr.forEach(k => { if (!tr.length || !(k in tr[0])) throw new Error(`Trades CSV missing column: ${k}`); });
+
         setEqRows(eq);
         setTrRows(tr);
+        setErr("");
       } catch (e) {
-        if (alive) setErr(String(e));
+        if (alive) { setErr(String(e)); setEqRows(null); setTrRows(null); }
       }
     })();
-    return () => {
-      alive = false;
-    };
-  }, [equityUrl, tradesUrl]);
+    return () => { alive = false; };
+  }, [activeEquityUrl, tradesUrl]);
 
-  // helpers
-  const toNum = (v, d = 0) => {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : d;
-  };
+  const toNum = (v, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
   const fmtPct = (x) => `${(x * 100).toFixed(2)}%`;
 
-  function LineChart({ series, height = 200 }) {
+  function MultiLineChart({ seriesList, height = 220 }) {
     const W = 800, H = height, m = 20;
-    const yVals = series.map((d) => d.y);
-    const minY = Math.min(...yVals);
-    const maxY = Math.max(...yVals);
-    const span = maxY - minY || 1e-9;
-    const n = series.length;
+    const allY = seriesList.flatMap(s => s.data.map(d => d.y));
+    const minY = Math.min(...allY);
+    const maxY = Math.max(...allY);
+    const span = (maxY - minY) || 1e-9;
+    const n = Math.max(...seriesList.map(s => s.data.length));
     const x = (i) => m + (i * (W - 2 * m)) / Math.max(1, n - 1);
     const y = (v) => m + (H - 2 * m) * (1 - (v - minY) / span);
-    const d = series.map((pt, i) => `${i ? "L" : "M"}${x(i)},${y(pt.y)}`).join(" ");
     return (
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-48">
-        <path d={d} fill="none" stroke="currentColor" strokeWidth="1.5" />
+        {seriesList.map((s, idx) => {
+          const d = s.data.map((pt, i) => `${i ? "L" : "M"}${x(i)},${y(pt.y)}`).join(" ");
+          return <path key={s.name || idx} d={d} fill="none" stroke="currentColor" strokeWidth="1.5" opacity={s.opacity ?? 1} />;
+        })}
       </svg>
     );
   }
@@ -428,75 +471,137 @@ function Sp500Viewer({ equityUrl, tradesUrl }) {
     return (
       <div className="space-y-4">
         <p className="text-rose-400 text-sm">{String(err)}</p>
-        <p className="text-zinc-400 text-sm">Upload your CSVs to <code>public/data/sp500_equity_1970.csv</code> and <code>public/data/sp500_trades_1970_tickers.csv</code>.</p>
+        <p className="text-zinc-400 text-sm">Expected columns: <code>date,equity,drawdown,bench_equity[,exposure]</code>.</p>
       </div>
     );
   }
-  if (!eqRows || !trRows) {
-    return <p className="text-zinc-400 text-sm">Loading data…</p>;
-  }
+  if (!eqRows || !trRows) return <p className="text-zinc-400 text-sm" aria-live="polite">Loading data…</p>;
 
-  // map eq rows
-  const eqSeries = eqRows.map((r) => ({
+  // map rows (no Date parsing—index-based avoids TZ drift)
+  const eqSeries = eqRows.map(r => ({
     date: r.date,
     equity: toNum(r.equity, 1),
-    drawdown: toNum(r.drawdown, 0),
     bench: toNum(r.bench_equity, 1),
+    dd: toNum(r.drawdown, 0), // negative
+    exposure: ("exposure" in r ? Math.max(0, Math.min(1, toNum(r.exposure, 0))) : null),
   }));
 
-  // metrics
-  const eqVals = eqSeries.map((d) => d.equity);
-  const dates = eqSeries.map((d) => new Date(d.date));
-  const rets = eqVals.slice(1).map((v, i) => (v / eqVals[i] - 1));
-  const mean = rets.reduce((a, b) => a + b, 0) / Math.max(1, rets.length);
-  const std = Math.sqrt(rets.reduce((a, b) => a + (b - mean) * (b - mean), 0) / Math.max(1, rets.length));
-  const W = 52;
-  const annRet = mean * W;
-  const annVol = std * Math.sqrt(W);
-  const sharpe = annVol ? annRet / annVol : 0;
-  const years = (dates[dates.length - 1] - dates[0]) / (365.25 * 24 * 3600 * 1000);
-  const cagr = Math.pow(eqVals[eqVals.length - 1] / eqVals[0], 1 / Math.max(1e-9, years)) - 1;
-  const maxDD = Math.min(...eqSeries.map((d) => d.drawdown));
+  // === Metrics ===
+  const eqVals = eqSeries.map(d => d.equity);
+  const benchVals = eqSeries.map(d => d.bench);
+  const samples = eqVals.length;
+  const weeks = 52;
+  const years = samples / weeks;
 
-  // trades filter + paging
-  const filtered = trRows.filter((r) => (r.ticker || "").toLowerCase().includes(q.toLowerCase()));
+  const rets = eqVals.slice(1).map((v, i) => (v / eqVals[i] - 1));
+  const mean = rets.length ? rets.reduce((a,b)=>a+b,0)/rets.length : 0;
+  const std  = rets.length ? Math.sqrt(rets.reduce((a,b)=>a+(b-mean)*(b-mean),0)/rets.length) : 0;
+
+  const cagr = years>0 ? Math.pow(eqVals.at(-1)/Math.max(1e-9, eqVals[0]), 1/years) - 1 : 0;
+  const benchCagr = years>0 ? Math.pow(benchVals.at(-1)/Math.max(1e-9, benchVals[0]), 1/years) - 1 : 0;
+
+  const annRet = mean * weeks;                 // rf=0 assumption
+  const annVol = std * Math.sqrt(weeks);
+  const sharpe = annVol ? annRet/annVol : 0;   // annualized, rf=0
+
+  const maxDD = Math.min(...eqSeries.map(d => d.dd)); // negative
+  const ulcer = Math.sqrt(eqSeries.reduce((a,d)=>a + (100*Math.abs(d.dd))**2, 0) / Math.max(1, samples));
+  const mar = (Math.abs(maxDD) > 0 ? cagr / Math.abs(maxDD) : 0);
+
+  const exposure = eqSeries[0].exposure == null
+    ? null
+    : eqSeries.reduce((a,d)=>a+(Number.isFinite(d.exposure)?d.exposure:0),0)/Math.max(1,samples);
+
+  // turnover proxy (entries per year)
+  const entriesPerYear = (() => {
+    const byYear = {};
+    trRows.forEach(r => {
+      const y = String(r.entry_date || "").slice(0,4);
+      if (/^\d{4}$/.test(y)) byYear[y] = (byYear[y]||0)+1;
+    });
+    const ys = Object.keys(byYear);
+    if (!ys.length) return 0;
+    return Object.values(byYear).reduce((a,b)=>a+b,0)/ys.length;
+  })();
+
+  const asOf = eqSeries.at(-1)?.date || "—";
+
+  // filtering + paging
+  const filtered = trRows.filter(r => (r.ticker || "").toLowerCase().includes(q.toLowerCase()));
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE));
   const start = (page - 1) * PAGE;
   const rows = filtered.slice(start, start + PAGE);
 
+  // chart series
+  const equityLine = eqSeries.map((d,i)=>({x:i,y:d.equity}));
+  const benchLine  = eqSeries.map((d,i)=>({x:i,y:d.bench}));
+  const ddLine     = eqSeries.map((d,i)=>({x:i,y:d.dd}));
+
   return (
     <div className="space-y-8">
+      {/* Ablation toggle */}
+      {allEquityUrls.length > 1 && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-zinc-400">Variant:</span>
+          {allEquityUrls.map((u,i)=>(
+            <button key={u} onClick={()=>setSelectedIdx(i)}
+              className={`px-2 py-1 rounded-lg border ${selectedIdx===i ? "bg-white text-black border-transparent" : "bg-zinc-900 text-zinc-200 border-zinc-700 hover:border-zinc-500"}`}
+              title={u}
+            >
+              {i===0 ? "Baseline" : `Alt ${i}`}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Metrics */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-6 gap-3">
         <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900/60"><div className="text-xs text-zinc-400">CAGR</div><div className="text-lg">{fmtPct(cagr)}</div></div>
-        <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900/60"><div className="text-xs text-zinc-400">Sharpe (weekly)</div><div className="text-lg">{sharpe.toFixed(2)}</div></div>
+        <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900/60"><div className="text-xs text-zinc-400">Benchmark CAGR</div><div className="text-lg">{fmtPct(benchCagr)}</div></div>
+        <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900/60"><div className="text-xs text-zinc-400">Sharpe (annualized, rf=0)</div><div className="text-lg">{sharpe.toFixed(2)}</div></div>
         <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900/60"><div className="text-xs text-zinc-400">Max Drawdown</div><div className="text-lg">{fmtPct(maxDD)}</div></div>
-        <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900/60"><div className="text-xs text-zinc-400">Samples</div><div className="text-lg">{eqSeries.length}</div></div>
+        <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900/60"><div className="text-xs text-zinc-400">Ulcer Index</div><div className="text-lg">{ulcer.toFixed(2)}</div></div>
+        <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900/60"><div className="text-xs text-zinc-400">MAR (CAGR/|MaxDD|)</div><div className="text-lg">{mar.toFixed(2)}</div></div>
       </div>
 
-      {/* Equity Curve */}
+      {/* Secondary */}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900/60"><div className="text-xs text-zinc-400">Samples</div><div className="text-lg">{samples}</div></div>
+        <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900/60"><div className="text-xs text-zinc-400">Years (≈)</div><div className="text-lg">{years.toFixed(1)}</div></div>
+        <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900/60"><div className="text-xs text-zinc-400">Exposure %</div><div className="text-lg">{exposure==null ? "—" : `${(100*exposure).toFixed(0)}%`}</div></div>
+      </div>
+
+      {/* Equity vs Benchmark */}
       <div className="rounded-2xl border border-zinc-800 p-4 bg-zinc-900/60">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold">Equity Curve</h3>
-          <a href={equityUrl} target="_blank" rel="noreferrer" className="text-sm underline underline-offset-4">Download equity CSV</a>
+          <h3 className="font-semibold">Equity vs. Benchmark</h3>
+          <div className="flex items-center gap-4 text-sm">
+            <span className="text-zinc-400">As of: <span className="text-zinc-200">{asOf}</span></span>
+            <a href={activeEquityUrl} target="_blank" rel="noreferrer" className="underline underline-offset-4">Download equity CSV</a>
+          </div>
         </div>
-        <LineChart series={eqSeries.map((d, i) => ({ x: i, y: d.equity }))} />
+        {Math.abs(maxDD) > 0.20 && (
+          <div className="text-xs text-amber-400 mb-2">Warning: MaxDD &gt; 20% (retail pain line)</div>
+        )}
+        <MultiLineChart seriesList={[
+          { name: "Strategy", data: equityLine },
+          { name: "Benchmark", data: benchLine, opacity: 0.6 },
+        ]} />
+        <div className="mt-2 text-xs text-zinc-400">Both curves normalized to 1.0 at start.</div>
       </div>
 
       {/* Drawdown */}
       <div className="rounded-2xl border border-zinc-800 p-4 bg-zinc-900/60">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold">Drawdown</h3>
-        </div>
-        <LineChart series={eqSeries.map((d, i) => ({ x: i, y: d.drawdown }))} />
+        <div className="flex items-center justify-between mb-2"><h3 className="font-semibold">Drawdown (fraction)</h3></div>
+        <MultiLineChart seriesList={[{ name: "DD", data: ddLine }]} />
       </div>
 
-      {/* Trades Table */}
+      {/* Trades */}
       <div className="rounded-2xl border border-zinc-800 p-4 bg-zinc-900/60">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold">Trades</h3>
           <div className="flex items-center gap-3">
-            <input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Filter by ticker…" className="px-3 py-1.5 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-100 text-sm" />
+            <input value={q} onChange={(e)=>{ setQ(e.target.value); setPage(1); }} placeholder="Filter by ticker…" className="px-3 py-1.5 rounded-xl border border-zinc-700 bg-zinc-900 text-zinc-100 text-sm" />
             <a href={tradesUrl} target="_blank" rel="noreferrer" className="text-sm underline underline-offset-4">Download trades CSV</a>
           </div>
         </div>
@@ -515,7 +620,7 @@ function Sp500Viewer({ equityUrl, tradesUrl }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, i) => (
+              {rows.map((r,i)=>(
                 <tr key={i} className="border-t border-zinc-800">
                   <td className="py-2 pr-3">{r.ticker}</td>
                   <td className="py-2 pr-3">{r.entry_date}</td>
@@ -533,8 +638,8 @@ function Sp500Viewer({ equityUrl, tradesUrl }) {
         <div className="flex items-center justify-between mt-3 text-sm">
           <span className="text-zinc-400">Page {page} / {totalPages} — {filtered.length} trades</span>
           <div className="flex items-center gap-2">
-            <button onClick={() => setPage((p) => Math.max(1, p - 1))} className="px-3 py-1.5 rounded-xl border border-zinc-700 disabled:opacity-50" disabled={page <= 1}>Prev</button>
-            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} className="px-3 py-1.5 rounded-xl border border-zinc-700 disabled:opacity-50" disabled={page >= totalPages}>Next</button>
+            <button onClick={()=>setPage(p=>Math.max(1,p-1))} className="px-3 py-1.5 rounded-xl border border-zinc-700 disabled:opacity-50" disabled={page<=1}>Prev</button>
+            <button onClick={()=>setPage(p=>Math.min(totalPages,p+1))} className="px-3 py-1.5 rounded-xl border border-zinc-700 disabled:opacity-50" disabled={page>=totalPages}>Next</button>
           </div>
         </div>
       </div>
@@ -1137,7 +1242,7 @@ export default function PortfolioSite() {
             <div className="rounded-2xl border border-zinc-800 p-6 md:p-8 bg-zinc-900/60 flex items-center justify-between flex-wrap gap-4">
               <p className="text-zinc-300">I’m open to internships, collaborations, and interesting projects.</p>
               <div className="flex items-center gap-4 text-sm">
-                <a href="mailto:brande.fruin@uconn.edu" className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-zinc-700"> <Mail className="h-4 w-4"/> Email me</a>
+                <a href="mailto:braden.fruin@uconn.edu" className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-zinc-700"> <Mail className="h-4 w-4"/> Email me</a>
                 <a href="https://github.com/bradenfruin" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-zinc-700"><Github className="h-4 w-4"/> GitHub</a>
                 <a href="https://www.linkedin.com/in/braden-fruin-081695333/" target="_blank" rel="noreferrer" className="underline underline-offset-4">LinkedIn</a>
               </div>
@@ -1152,7 +1257,7 @@ export default function PortfolioSite() {
         <div className="mx-auto max-w-6xl px-4 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-zinc-400">© {new Date().getFullYear()} Braden Fruin</p>
           <div className="flex items-center gap-4 text-sm">
-            <a href="mailto:brande.fruin@uconn.edu" className="inline-flex items-center gap-2"><Mail className="h-4 w-4" />Email</a>
+            <a href="mailto:braden.fruin@uconn.edu" className="inline-flex items-center gap-2"><Mail className="h-4 w-4" />Email</a>
             <a href="https://github.com/bradenfruin" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2"><Github className="h-4 w-4" />GitHub</a>
             <a href="https://www.linkedin.com/in/braden-fruin-081695333/" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2">LinkedIn</a>
             <a href="#top" className="underline underline-offset-4">Back to top</a>
