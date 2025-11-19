@@ -80,6 +80,21 @@ const PROJECTS = [
     tags: ["Game Theory", "Decision Making", "Economics"],
     pdf: `${import.meta.env.BASE_URL}projects/ipd.pdf`,
   },
+  {
+    id: "solidworks-parts",
+    title: "SolidWorks Parts Library",
+    description:
+      "A Library of all parts and detailed drawings I’ve modeled in SolidWorks.",
+    tags: ["SolidWorks", "CAD", "Mechanical Design"],
+    image: `${import.meta.env.BASE_URL}solidworks-logo.png`,  // 🔹 logo on the card
+    pdf: "",
+    links: {
+      github: "",
+      demo: "",
+    },
+  },
+];
+
 ];
 
 const ProjectCard = ({ p }) => (
@@ -1221,7 +1236,69 @@ function ProjectDetail({ id }) {
       </div>
     );
   }
+   if (p.id === "solidworks-parts") {
+    const PARTS = [
+      {
+        id: "drawer-knob",
+        name: "Drawer Knob",
+        description: "Dimensioned knob with fillets and chamfers, modeled for proper fit and manufacturability.",
+        image: `${import.meta.env.BASE_URL}solidworks/drawer-knob.png`,
+      },
+      {
+        id: "hammock-hook",
+        name: "Hammock Hook",
+        description: "Hook with stress-conscious geometry and mounting features, designed for a specific load case.",
+        image: `${import.meta.env.BASE_URL}solidworks/hammock-hook.png`,
+      },
+      {
+        id: "rc8-fit-shaft",
+        name: "RC8 Fit Shaft & Hole",
+        description: "Mating shaft–hole pair built to RC8 running-clearance specs with detailed drawing views.",
+        image: `${import.meta.env.BASE_URL}solidworks/rc8-fit.png`,
+      },
+      // add more parts as you create them
+    ];
 
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold">{p.title}</h1>
+        <p className="text-zinc-300 max-w-2xl">{p.description}</p>
+
+        <div className="space-y-4">
+          {PARTS.map((part) => (
+            <div
+              key={part.id}
+              className="rounded-2xl border border-zinc-800 bg-zinc-900/60 overflow-hidden flex flex-col md:flex-row"
+            >
+              <div className="md:w-1/2 border-b md:border-b-0 md:border-r border-zinc-800 bg-black">
+                {part.image ? (
+                  <img
+                    src={part.image}
+                    alt={part.name}
+                    className="w-full h-full max-h-80 object-contain"
+                  />
+                ) : (
+                  <div className="w-full h-48 flex items-center justify-center text-zinc-500 text-sm">
+                    Image coming soon
+                  </div>
+                )}
+              </div>
+              <div className="md:w-1/2 p-4 md:p-6 space-y-2">
+                <h2 className="text-lg font-semibold">{part.name}</h2>
+                <p className="text-sm text-zinc-300">{part.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <a href="#/" className="px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center">
+            ← Back
+          </a>
+        </div>
+      </div>
+    );
+  }
   if (p.id === "sp500-backtest") {
     return (
       <div className="space-y-6">
