@@ -86,7 +86,7 @@ const PROJECTS = [
     description:
       "A Library of all parts and detailed drawings I’ve modeled in SolidWorks.",
     tags: ["SolidWorks", "CAD", "Mechanical Design"],
-    image: `${import.meta.env.BASE_URL}solidworks-logo.png`,  // 🔹 logo on the card
+    image: `${import.meta.env.BASE_URL}solidworks-logo.pdf`, 
     pdf: "",
     links: {
       github: "",
