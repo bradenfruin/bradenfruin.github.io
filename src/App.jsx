@@ -95,8 +95,6 @@ const PROJECTS = [
   },
 ];
 
-];
-
 const ProjectCard = ({ p }) => (
   <a
     href={`#/project/${p.id}`}
