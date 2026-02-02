@@ -17,7 +17,7 @@ const PROJECTS = [
     pdf: `${import.meta.env.BASE_URL}projects/leetcode-problems.pdf`,
     links: {
       github: "https://github.com/bradenfruin/algorithms-notes",
-      demo: "",
+      demo: "https://bradenfruin.github.io/warren-buffett-indicator/",
     },
   },
   {
