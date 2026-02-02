@@ -1474,9 +1474,6 @@ export default function PortfolioSite() {
             <a href="#projects" className="hover:underline underline-offset-4">
               Projects
             </a>
-            <a href="#about" className="hover:underline underline-offset-4">
-              About
-            </a>
             <a href="#education" className="hover:underline underline-offset-4">
               Education
             </a>
@@ -1526,15 +1523,6 @@ export default function PortfolioSite() {
             {filtered.length === 0 && <p className="text-center text-zinc-400 pt-10">No projects to show.</p>}
           </section>
 
-          {/* About */}
-          <section id="about" className="mx-auto max-w-6xl px-4 pb-20">
-            <h2 className="text-xl font-semibold mb-4">About</h2>
-            <div className="rounded-2xl border border-zinc-800 p-6 md:p-8 bg-zinc-900/60">
-              <p className="text-zinc-300">
-                I’m a Mechanical Engineering student at UConn who builds mechanical and quantitative systems. I’m interested in aerospace, robotics, and algorithmic trading. Recently I’ve been developing trend-following strategies with strict risk controls and shipping tools to visualize signals and drawdowns. I like hard problems, clean design, and measurable outcomes.
-              </p>
-            </div>
-          </section>
 
           {/* Education */}
           <section id="education" className="mx-auto max-w-6xl px-4 pb-20">
