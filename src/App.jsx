@@ -101,7 +101,7 @@ const PROJECTS = [
   pdf: `${import.meta.env.BASE_URL}projects/the-warren-buffett-indicator.pdf`,
   links: {
     github: "https://github.com/bradenfruin/warren-buffett-indicator",
-    demo: "",
+    demo: "https://bradenfruin.github.io/warren-buffett-indicator/",
   },
 },
 ];
