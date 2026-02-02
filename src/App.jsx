@@ -1248,16 +1248,16 @@ function ProjectDetail({ id }) {
    if (p.id === "solidworks-parts") {
     const PARTS = [
       {
-        id: "drawer-knob",
-        name: "Drawer Knob",
-        description: "Dimensioned knob with fillets and chamfers, modeled for proper fit and manufacturability.",
-        image: `${import.meta.env.BASE_URL}solidworks/drawer-knob.png`,
+        id: "ShaftSupport-drawing",
+        name: "Shaft Support Drawing",
+        description: "Designed shaft support using symmetric cuts around the origin.",
+        image: `${import.meta.env.BASE_URL}solidworks/FruinB_Fa2025_Module4_ShaftSupport-drawing.pdf`,
       },
       {
-        id: "hammock-hook",
-        name: "Hammock Hook",
-        description: "Hook with stress-conscious geometry and mounting features, designed for a specific load case.",
-        image: `${import.meta.env.BASE_URL}solidworks/hammock-hook.png`,
+        id: "Sheet-Metal-1.",
+        name: "Sheet Metal Drawing",
+        description: "Sheet metal drawing designed to be a 1 sided cheese grater!!!",
+        image: `${import.meta.env.BASE_URL}solidworks/Sheet-Metal-1.pdf`,
       },
       {
         id: "rc8-fit-shaft",
