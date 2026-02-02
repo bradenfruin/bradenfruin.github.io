@@ -1251,7 +1251,7 @@ function ProjectDetail({ id }) {
         id: "ShaftSupport-drawing",
         name: "Shaft Support Drawing",
         description: "Designed shaft support using symmetric cuts around the origin.",
-        image: `${import.meta.env.BASE_URL}solidworks/FruinB_Fa2025_Module4_ShaftSupport-drawing.pdf`,
+        image: `${import.meta.env.BASE_URL}solidworks/ShaftSupport-drawing.pdf`,
       },
       {
         id: "Sheet-Metal-1.",
