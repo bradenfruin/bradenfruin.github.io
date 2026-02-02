@@ -1251,19 +1251,19 @@ function ProjectDetail({ id }) {
         id: "ShaftSupport-drawing",
         name: "Shaft Support Drawing",
         description: "Designed shaft support using symmetric cuts around the origin.",
-        image: `${import.meta.env.BASE_URL}solidworks/ShaftSupport-drawing.pdf`,
+        pdf: `${import.meta.env.BASE_URL}solidworks/ShaftSupport-drawing.pdf`,
       },
       {
-        id: "Sheet-Metal-1.",
+        id: "Sheet-Metal-1",
         name: "Sheet Metal Drawing",
         description: "Sheet metal drawing designed to be a 1 sided cheese grater!!!",
-        image: `${import.meta.env.BASE_URL}solidworks/Sheet-Metal-1.pdf`,
+        pdf: `${import.meta.env.BASE_URL}solidworks/Sheet-Metal-1.pdf`,
       },
       {
-        id: "rc8-fit-shaft",
-        name: "RC8 Fit Shaft & Hole",
-        description: "Mating shaft–hole pair built to RC8 running-clearance specs with detailed drawing views.",
-        image: `${import.meta.env.BASE_URL}solidworks/rc8-fit.png`,
+        id: "faucet",
+        name: "Garden Hose Faucet & valve",
+        description: "Designed a garden hose faucet and valve with extruded threading.",
+        pdf: `${import.meta.env.BASE_URL}solidworks/faucet.pdf`,
       },
       // add more parts as you create them
     ];
