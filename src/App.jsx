@@ -93,6 +93,18 @@ const PROJECTS = [
       demo: "",
     },
   },
+  {
+  id: "the-warren-buffett-indicator",
+  title: "The Warren Buffett Indicator",
+  description:
+    "Backtest + report showing how the Buffett Indicator can guide investment decisions across market cycles.",
+  tags: ["Python", "Backtesting", "Macro"],
+  pdf: `${import.meta.env.BASE_URL}projects/the-warren-buffett-indicator.pdf`,
+  links: {
+    github: "https://github.com/bradenfruin/warren-buffett-indicator",
+    demo: "",
+  },
+},
 ];
 
 const ProjectCard = ({ p }) => (
