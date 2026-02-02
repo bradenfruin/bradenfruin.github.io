@@ -1286,11 +1286,29 @@ function ProjectDetail({ id }) {
                     alt={part.name}
                     className="w-full h-full max-h-80 object-contain"
                   />
-                ) : (
-                  <div className="w-full h-48 flex items-center justify-center text-zinc-500 text-sm">
-                    Image coming soon
+                ) : part.pdf ? (
+                  <object 
+                    data={part.pdf} 
+                    type="application/pdf" 
+                    className="w-full h-full min-h-80"
+                  >
+                    <div className="w-full h-48 flex flex-col items-center justify-center text-zinc-500 text-sm gap-2">
+                      <div>PDF preview not available</div>
+                      <a
+                        href={part.pdf}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline underline-offset-4"
+                      >
+                      Open PDF
+                    </a>
                   </div>
-                )}
+                </object>
+              ) : (
+                <div className="w-full h-48 flex items-center justify-center text-zinc-500 text-sm">
+                  Image coming soon
+                </div>
+              )}
               </div>
               <div className="md:w-1/2 p-4 md:p-6 space-y-2">
                 <h2 className="text-lg font-semibold">{part.name}</h2>
