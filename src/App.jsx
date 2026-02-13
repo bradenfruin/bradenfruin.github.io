@@ -104,6 +104,17 @@ const PROJECTS = [
     demo: "https://bradenfruin.github.io/warren-buffett-indicator/",
   },
 },
+  {
+  id: "Dual-Class-Arbitrage",
+  title: "Dual Class Arbitrage",
+  description:
+    "A trading strategy that involves taking advantage of the price discrepency that exists between stocks that have dual listings. (Ex: GOOG vs GOOGL)",
+  pdf: `${import.meta.env.BASE_URL}projects/googl.pdf`,
+  links: {
+    github: "https://github.com/bradenfruin/Dual-Class-Arbitrage",
+    demo: "https://bradenfruin.github.io/Dual-Class-Arbitrage/",
+  },
+},
 ];
 
 const ProjectCard = ({ p }) => (
