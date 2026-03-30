@@ -1319,10 +1319,85 @@ function IpdScreen({ onBack }) {
     </div>
   );
 }
+function LeetCodeProblems() {
+  const problems = [
+    {
+      number: 1,
+      title: "2 sum",
+      explain:
+        "Given an array of integers and a target number, return the indices of the two numbers that add up to the target. You can assume there is exactly one solution, and you cannot use the same element twice.",
+      answer: `For Two Sum, how I first thought about doing it was just using a nested for loop. I would start at the first index, then iterate through the rest of the list and check if the sum of the two numbers equals the target. If it did, I’d store those two indices in a separate list. This does work, but the time complexity is O(n^2), which means as the list gets bigger, the number of comparisons grows really fast because you’re basically checking every pair. This is known as the “Brute force approach”
 
+The better way to do it is with a hash map. For each number, you do target - current value to figure out the number you need. Then you check if that number has already been seen. If it has, you already have your answer. That gives you a time complexity of O(n), which means you only have to go through the list once, so it’s a lot faster and way more efficient.`,
+    },
+    {
+      number: 2,
+      title: "Valid parenthesis",
+      explain:
+        "Given a string containing only parentheses and brackets like (), [], and {}, determine if the string is valid. A string is valid if every opening bracket is closed by the same type of bracket, in the correct order, and no bracket is closed before it was opened.",
+      answer: `My initial thought was to use a dictionary where the opening brackets (, [, and { map to their matching closing brackets. Then I would iterate through the string and try to remove matching pairs as I found them. For example, with ([{}]), I was thinking I could work from the inside out by removing {}, then [], then (), and if the string ended up empty then it would be valid.
+
+But that approach is kind of messy and not the best way to handle it, because brackets are not always right next to the one they match with. You also have to make sure a bracket is not being closed before it was ever opened. For example, if the string starts with ) or ], that should immediately be invalid because there is nothing before it to match with.
+
+That’s what leads to the stack solution. With a stack, every time I see an opening bracket, I push it onto the stack. Then when I see a closing bracket, I first check if the stack is empty. If it is, that means a bracket is being closed before it was opened, so the string is invalid. If the stack is not empty, then I check whether the top of the stack is the matching opening bracket. If it is, I pop it off. If it is not, then it is invalid. At the end, if the stack is empty, then the string is valid.
+
+The best way to think about a stack is FILO, meaning first in, last out. A good example is a messy stack of papers on your desk. You really only have access to the paper on the top, not the one on the bottom. If you want to get to the bottom paper, you have to go through all the papers above it first. Since the first paper was placed down first, everything else gets piled on top of it, so it ends up being the last one you take out.`,
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {problems.map((problem) => (
+        <div key={problem.number} className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-4">
+          <h2 className="text-2xl font-semibold">
+            {problem.number}. {problem.title}
+          </h2>
+
+          <div className="space-y-2">
+            <h3 className="text-lg font-medium text-zinc-200">Explain the problem</h3>
+            <p className="text-zinc-300 whitespace-pre-line">{problem.explain}</p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-lg font-medium text-zinc-200">My answer</h3>
+            <p className="text-zinc-300 whitespace-pre-line">{problem.answer}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 function ProjectDetail({ id }) {
   const p = PROJECTS.find((x) => x.id === id);
   if (!p) return <p className="text-zinc-400">Project not found.</p>;
+  if (p.id === "leetcode-problems") {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold">{p.title}</h1>
+        <p  className="text-zinc-300">{p.description}</p>
+
+        <div className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/60 p-4">
+          <LeetCodeProblems />
+        </div>
+
+        <div className="flex items-center gap-3">
+          {p.links?.github && (
+            <a
+              href={p.links.github}
+              target="_blank"
+              rel="noreferrer"
+              className="px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center gap-2"
+            >
+              <Github className="h-4 w-4" /> Code
+            </a>
+          )}
+          <a href="#/" className="px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center">
+            Back
+          </a>
+        </div>
+      </div>
+    );
+  }  
 
   if (p.id === "qr-code-library") {
     return (
