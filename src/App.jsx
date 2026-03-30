@@ -813,27 +813,24 @@ function simulateBotMatch(botA, botB, rounds = 10) {
     aYears += yearsA;
     bYears += yearsB;
 
-    histA = [
-      ...histA,
-      {
-        round,
-        you: moveA,
-        opp: moveB,
-        youYears: yearsA,
-        oppYears: yearsB,
-      },
-    ];
+    // IMPORTANT:
+    // each bot sees "you" as the OTHER player
+    // and "opp" as itself, to match your existing decide() functions
+    histA.push({
+      round,
+      you: moveB,
+      opp: moveA,
+      youYears: yearsB,
+      oppYears: yearsA,
+    });
 
-    histB = [
-      ...histB,
-      {
-        round,
-        you: moveB,
-        opp: moveA,
-        youYears: yearsB,
-        oppYears: yearsA,
-      },
-    ];
+    histB.push({
+      round,
+      you: moveA,
+      opp: moveB,
+      youYears: yearsA,
+      oppYears: yearsB,
+    });
   }
 
   return { aYears, bYears };
@@ -883,10 +880,11 @@ function ipdDecideAxelrodTFT(hist) {
 }
 function ipdDecidePavlovWSLS(hist) {
   if (hist.length === 0) return C;
+
   const last = hist[hist.length - 1];
-  const lastOpp = last.opp;
-  const good = last.oppYears <= 1; // 0 or 1 years
-  return good ? lastOpp : (lastOpp === C ? S : C);
+  const good = last.oppYears <= 1;
+
+  return good ? last.opp : last.opp === C ? S : C;
 }
 const ipdDecideAlwaysS = () => S;
 function ipdDecidePressExtortion(hist) {
@@ -904,7 +902,9 @@ function ipdDecideYoda(hist) {
   if (hist.length === 0) return C;
   const k = Math.min(3, hist.length);
   let coop = 0;
-  for (let i = hist.length - k; i < hist.length; i++) if (hist[i].you === C) coop++;
+  for (let i = hist.length - k; i < hist.length; i++) {
+    if (hist[i].you === C) coop++;
+  }
   return coop / k >= 0.6 ? C : S;
 }
 const IPD_OPPONENTS = [
