@@ -239,9 +239,18 @@ function Calculator() {
 }
 
 function UnitConverter() {
-  const [cat, setCat] = useState("length");
-  const defaults = { length: ["m", "km"], weight: ["g", "kg"], temp: ["C", "F"] };
-  const LABELS = { length: "Length", weight: "Weight", temp: "Temperature" };
+  const defaults = {
+    length: ["m", "km"],
+    weight: ["g", "kg"],
+    temp: ["C", "F"],
+  };
+
+  const LABELS = {
+    length: "Length",
+    weight: "Weight",
+    temp: "Temperature",
+  };
+
   const UNITS = {
     length: {
       m: { label: "Meters", toBase: (v) => v, fromBase: (v) => v },
@@ -261,8 +270,9 @@ function UnitConverter() {
     },
   };
 
-  const [fromUnit, setFromUnit] = useState(defaults[cat][0]);
-  const [toUnit, setToUnit] = useState(defaults[cat][1]);
+  const [cat, setCat] = useState("length");
+  const [fromUnit, setFromUnit] = useState(defaults.length[0]);
+  const [toUnit, setToUnit] = useState(defaults.length[1]);
   const [input, setInput] = useState("");
 
   useEffect(() => {
@@ -272,30 +282,29 @@ function UnitConverter() {
   }, [cat]);
 
   const format = (x) => {
-  if (!Number.isFinite(x)) return "";
-  return Number(x.toFixed(6)).toString();
+    if (!Number.isFinite(x)) return "";
+    return Number(x.toFixed(6)).toString();
   };
 
   const convert = (val) => {
     const n = parseFloat(String(val).trim());
     if (!Number.isFinite(n)) return "";
-    if (cat === "temp") {
-      const toC = UNITS.temp[fromUnit].toBase(n);
-      const out = UNITS.temp[toUnit].fromBase(toC);
-      return format(out);
-    }
-    const toBase = UNITS[cat][fromUnit].toBase(n);
-    const out = UNITS[cat][toUnit].fromBase(toBase);
-    return format(out);
+
+    const baseValue = UNITS[cat][fromUnit].toBase(n);
+    const output = UNITS[cat][toUnit].fromBase(baseValue);
+
+    return format(output);
   };
 
   const swap = () => {
-  setFromUnit(toUnit);
-  setToUnit(fromUnit);
-  };
+    setFromUnit(toUnit);
+    setToUnit(fromUnit);
   };
 
-  const unitOptions = Object.entries(UNITS[cat]).map(([k, v]) => ({ value: k, label: v.label }));
+  const unitOptions = Object.entries(UNITS[cat]).map(([key, unit]) => ({
+    value: key,
+    label: unit.label,
+  }));
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-4">
@@ -305,7 +314,9 @@ function UnitConverter() {
             key={c}
             onClick={() => setCat(c)}
             className={`px-3 py-1 rounded-xl border text-sm ${
-              cat === c ? "bg-white text-black border-transparent" : "bg-zinc-900 text-zinc-200 border-zinc-700 hover:border-zinc-500"
+              cat === c
+                ? "bg-white text-black border-transparent"
+                : "bg-zinc-900 text-zinc-200 border-zinc-700 hover:border-zinc-500"
             }`}
           >
             {LABELS[c]}
@@ -327,7 +338,9 @@ function UnitConverter() {
               </option>
             ))}
           </select>
+
           <input
+            type="number"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Enter value"
@@ -336,7 +349,11 @@ function UnitConverter() {
         </div>
 
         <div className="flex flex-col items-center gap-2 pb-2">
-          <button onClick={swap} className="px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 hover:bg-zinc-800">
+          <button
+            onClick={swap}
+            className="px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
+            aria-label="Swap units"
+          >
             ↔
           </button>
         </div>
@@ -354,6 +371,7 @@ function UnitConverter() {
               </option>
             ))}
           </select>
+
           <input
             value={convert(input)}
             readOnly
@@ -363,7 +381,9 @@ function UnitConverter() {
         </div>
       </div>
 
-      <p className="text-xs text-zinc-500">Length uses meters as base; weight uses grams; temperature converts via Celsius.</p>
+      <p className="text-xs text-zinc-500">
+        Length uses meters as base; weight uses grams; temperature converts via Celsius.
+      </p>
     </div>
   );
 }
