@@ -115,6 +115,17 @@ const PROJECTS = [
     demo: "https://bradenfruin.github.io/Dual-Class-Arbitrage/",
   },
 },
+  {
+  id: "sudoku-solver",
+  title: "6x6 Sudoku Solver",
+  description:
+    "A 6x6 Sudoku solver with a fillable grid, constraint propagation, and backtracking.",
+  tags: ["Python", "Algorithms", "Sudoku"],
+  links: {
+    github: "",
+    demo: "",
+  },
+},
 ];
 
 const ProjectCard = ({ p }) => (
@@ -1367,9 +1378,240 @@ The best way to think about a stack is FILO, meaning first in, last out. A good 
     </div>
   );
 }
+function Sudoku6x6() {
+  const starterBoard = [
+    [0, 0, 0, 0, 6, 0],
+    [0, 0, 0, 4, 0, 0],
+    [0, 5, 0, 0, 0, 2],
+    [0, 0, 2, 0, 0, 0],
+    [0, 0, 6, 0, 0, 0],
+    [3, 0, 0, 0, 0, 0],
+  ];
+
+  const [board, setBoard] = useState(starterBoard);
+  const [error, setError] = useState("");
+
+  function solve6x6Sudoku(inputBoard, boxR = 2, boxC = 3) {
+    const N = 6;
+    const DIGITS = new Set([1, 2, 3, 4, 5, 6]);
+
+    if (inputBoard.length !== N || inputBoard.some((row) => row.length !== N)) {
+      throw new Error("Board must be 6x6.");
+    }
+
+    const peers = {};
+    for (let r = 0; r < N; r++) {
+      for (let c = 0; c < N; c++) {
+        const ps = new Set();
+
+        for (let cc = 0; cc < N; cc++) {
+          if (cc !== c) ps.add(`${r},${cc}`);
+        }
+        for (let rr = 0; rr < N; rr++) {
+          if (rr !== r) ps.add(`${rr},${c}`);
+        }
+
+        const br = Math.floor(r / boxR) * boxR;
+        const bc = Math.floor(c / boxC) * boxC;
+        for (let rr = br; rr < br + boxR; rr++) {
+          for (let cc = bc; cc < bc + boxC; cc++) {
+            if (!(rr === r && cc === c)) ps.add(`${rr},${cc}`);
+          }
+        }
+
+        peers[`${r},${c}`] = ps;
+      }
+    }
+
+    function candidates(b, r, c) {
+      const used = new Set();
+      for (const key of peers[`${r},${c}`]) {
+        const [rr, cc] = key.split(",").map(Number);
+        const val = b[rr][cc];
+        if (val !== 0) used.add(val);
+      }
+      return [...DIGITS].filter((x) => !used.has(x));
+    }
+
+    function propagateNakedSingles(b) {
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (let r = 0; r < N; r++) {
+          for (let c = 0; c < N; c++) {
+            if (b[r][c] === 0) {
+              const cand = candidates(b, r, c);
+              if (cand.length === 0) return false;
+              if (cand.length === 1) {
+                b[r][c] = cand[0];
+                changed = true;
+              }
+            }
+          }
+        }
+      }
+      return true;
+    }
+
+    function findMRVCell(b) {
+      let best = null;
+      let bestCand = null;
+
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          if (b[r][c] === 0) {
+            const cand = candidates(b, r, c);
+            if (cand.length === 0) return null;
+            if (best === null || cand.length < bestCand.length) {
+              best = [r, c];
+              bestCand = cand;
+            }
+          }
+        }
+      }
+
+      if (best === null) return null;
+      return [best[0], best[1], bestCand];
+    }
+
+    function backtrack(b) {
+      if (!propagateNakedSingles(b)) return null;
+
+      const solved = b.every((row) => row.every((cell) => cell !== 0));
+      if (solved) return b;
+
+      const mrv = findMRVCell(b);
+      if (mrv === null) return null;
+
+      const [r, c, cand] = mrv;
+      for (const v of [...cand].sort((a, b) => a - b)) {
+        const b2 = b.map((row) => [...row]);
+        b2[r][c] = v;
+        const sol = backtrack(b2);
+        if (sol) return sol;
+      }
+
+      return null;
+    }
+
+    const start = inputBoard.map((row) => [...row]);
+    return backtrack(start);
+  }
+
+  function handleChange(r, c, value) {
+    if (value === "") {
+      setBoard((prev) =>
+        prev.map((row, rr) =>
+          row.map((cell, cc) => (rr === r && cc === c ? 0 : cell))
+        )
+      );
+      return;
+    }
+
+    const num = Number(value);
+    if (!Number.isInteger(num) || num < 1 || num > 6) return;
+
+    setBoard((prev) =>
+      prev.map((row, rr) =>
+        row.map((cell, cc) => (rr === r && cc === c ? num : cell))
+      )
+    );
+  }
+
+  function handleSolve() {
+    setError("");
+    try {
+      const solved = solve6x6Sudoku(board, 2, 3);
+      if (!solved) {
+        setError("No solution found.");
+        return;
+      }
+      setBoard(solved);
+    } catch (e) {
+      setError("Invalid board.");
+    }
+  }
+
+  function handleReset() {
+    setBoard([
+      [0, 0, 0, 0, 6, 0],
+      [0, 0, 0, 4, 0, 0],
+      [0, 5, 0, 0, 0, 2],
+      [0, 0, 2, 0, 0, 0],
+      [0, 0, 6, 0, 0, 0],
+      [3, 0, 0, 0, 0, 0],
+    ]);
+    setError("");
+  }
+
+  return (
+    <div className="w-full max-w-2xl mx-auto space-y-4">
+      <div className="grid grid-cols-6 gap-2">
+        {board.map((row, r) =>
+          row.map((cell, c) => {
+            const thickRight = c === 2;
+            const thickBottom = r === 1 || r === 3;
+
+            return (
+              <input
+                key={`${r}-${c}`}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={cell === 0 ? "" : cell}
+                onChange={(e) => handleChange(r, c, e.target.value)}
+                className={`w-full aspect-square text-center rounded-xl bg-zinc-900 text-zinc-100 border
+                  ${thickRight ? "border-r-4 border-r-zinc-500" : ""}
+                  ${thickBottom ? "border-b-4 border-b-zinc-500" : ""}
+                  border-zinc-700`}
+              />
+            );
+          })
+        )}
+      </div>
+
+      <div className="flex gap-2">
+        <button
+          onClick={handleSolve}
+          className="px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
+        >
+          Solve
+        </button>
+        <button
+          onClick={handleReset}
+          className="px-3 py-2 rounded-xl border border-zinc-700"
+        >
+          Reset
+        </button>
+      </div>
+
+      {error && <p className="text-sm text-rose-400">{error}</p>}
+
+      <p className="text-xs text-zinc-500">
+        Enter digits 1–6. Leave a box blank for empty cells.
+      </p>
+    </div>
+  );
+}
 function ProjectDetail({ id }) {
   const p = PROJECTS.find((x) => x.id === id);
   if (!p) return <p className="text-zinc-400">Project not found.</p>;
+  if (p.id === "sudoku-solver") {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold">{p.title}</h1>
+        <p className="text-zinc-300">{p.description}</p>
+        <div className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/60 p-4">
+          <Sudoku6x6 />
+        </div>
+        <div className="flex items-center gap-3">
+          <a href="#/" className="px-3 py-1.5 rounded-xl border border-zinc-700 inline-flex items-center">
+            Back
+          </a>
+        </div>
+      </div>
+    );
+  }
   if (p.id === "leetcode-problems") {
     return (
       <div className="space-y-6">
