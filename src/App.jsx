@@ -123,8 +123,8 @@ const PROJECTS = [
   tags: ["Python", "Algorithms", "Sudoku"],
   pdf: `${import.meta.env.BASE_URL}projects/sudoku.pdf`,
   links: {
-    github: "https://github.com/bradenfruin/sudoku-solver",
-    demo: "https://bradenfruin.github.io/sudoku-solver/",
+    github: "",
+    demo: "",
   },
 },
 ];
