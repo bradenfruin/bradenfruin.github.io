@@ -271,7 +271,10 @@ function UnitConverter() {
     setInput("");
   }, [cat]);
 
-  const format = (x) => String(Math.round(x * 1e-6) / 1e-6); // keep precision reasonable
+  const format = (x) => {
+  if (!Number.isFinite(x)) return "";
+  return Number(x.toFixed(6)).toString();
+  };
 
   const convert = (val) => {
     const n = parseFloat(String(val).trim());
@@ -287,10 +290,9 @@ function UnitConverter() {
   };
 
   const swap = () => {
-    setFromUnit((a) => {
-      setToUnit(a);
-      return toUnit;
-    });
+  setFromUnit(toUnit);
+  setToUnit(fromUnit);
+  };
   };
 
   const unitOptions = Object.entries(UNITS[cat]).map(([k, v]) => ({ value: k, label: v.label }));
