@@ -121,9 +121,10 @@ const PROJECTS = [
   description:
     "A 6x6 Sudoku solver with a fillable grid, constraint propagation, and backtracking.",
   tags: ["Python", "Algorithms", "Sudoku"],
+  pdf: `${import.meta.env.BASE_URL}projects/sudoku.pdf`,
   links: {
-    github: "",
-    demo: "",
+    github: "https://github.com/bradenfruin/sudoku-solver",
+    demo: "https://bradenfruin.github.io/sudoku-solver/",
   },
 },
 ];
