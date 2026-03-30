@@ -798,7 +798,69 @@ function Sp500Viewer({ equityUrl, tradesUrl, altEquityUrls = [] }) {
 /* ==== IPD GAME (simple-state screen) ==== */
 const C = "C"; // Cooperate
 const S = "S"; // Snitch
+function simulateBotMatch(botA, botB, rounds = 10) {
+  let histA = [];
+  let histB = [];
+  let aYears = 0;
+  let bYears = 0;
 
+  for (let round = 1; round <= rounds; round++) {
+    const moveA = botA.decide(histA);
+    const moveB = botB.decide(histB);
+
+    const [yearsA, yearsB] = ipdPayoff(moveA, moveB);
+
+    aYears += yearsA;
+    bYears += yearsB;
+
+    histA = [
+      ...histA,
+      {
+        round,
+        you: moveA,
+        opp: moveB,
+        youYears: yearsA,
+        oppYears: yearsB,
+      },
+    ];
+
+    histB = [
+      ...histB,
+      {
+        round,
+        you: moveB,
+        opp: moveA,
+        youYears: yearsB,
+        oppYears: yearsA,
+      },
+    ];
+  }
+
+  return { aYears, bYears };
+}
+
+function buildBotTournament(opponents, rounds = 10) {
+  const standings = Object.fromEntries(
+    opponents.map((bot) => [
+      bot.id,
+      { id: bot.id, name: bot.name, years: 0 },
+    ])
+  );
+
+  for (let i = 0; i < opponents.length; i++) {
+    for (let j = i + 1; j < opponents.length; j++) {
+      const botA = opponents[i];
+      const botB = opponents[j];
+
+      const { aYears, bYears } = simulateBotMatch(botA, botB, rounds);
+
+      standings[botA.id].years += aYears;
+      standings[botB.id].years += bYears;
+    }
+  }
+
+  return Object.values(standings).sort((a, b) => a.years - b.years);
+}
 function ipdPayoff(my, opp) {
   if (my === C && opp === C) return [1, 1];
   if (my === S && opp === C) return [0, 3];
@@ -1182,11 +1244,21 @@ function IpdScreen({ onBack }) {
   }
 
   if (screen === "leaderboard" && allDone) {
-    const youTotal = IPD_OPPONENTS.reduce((a, c) => a + (totals[c.id]?.youYears || 0), 0);
-    const entries = [
-      ...IPD_OPPONENTS.map((c) => ({ name: c.name, years: totals[c.id]?.oppYears || 0, type: "opp" })),
-      { name: "You", years: youTotal, type: "you" },
-    ].sort((a, b) => a.years - b.years);
+  const botEntries = buildBotTournament(IPD_OPPONENTS, 10);
+
+  const youTotal = IPD_OPPONENTS.reduce(
+    (sum, bot) => sum + (totals[bot.id]?.youYears || 0),
+    0
+  );
+
+  const entries = [
+    ...botEntries.map((bot) => ({
+      name: bot.name,
+      years: bot.years,
+      type: "opp",
+    })),
+    { name: "You", years: youTotal, type: "you" },
+  ].sort((a, b) => a.years - b.years);
 
     return (
       <div className="space-y-4">
